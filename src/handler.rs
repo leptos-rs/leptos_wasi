@@ -451,11 +451,12 @@ fn provide_contexts(
     context_parts: Parts,
     res_opts: ResponseOptions,
 ) {
-    additional_context();
     provide_context(RequestUrl::new(context_parts.uri.path()));
     provide_context(context_parts);
     provide_context(res_opts);
+    additional_context();
     provide_server_redirect(redirect);
+    leptos::nonce::provide_nonce();
 }
 
 trait IntoRouteListing: Sized {
