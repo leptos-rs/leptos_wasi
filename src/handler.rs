@@ -1,10 +1,14 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    response::{Body, Response, ResponseOptions},
+    response::{Response, ResponseOptions},
     utils::redirect,
     CHUNK_BYTE_SIZE,
 };
+
+/// Maximum size for request bodies when collecting async streams (16MB)
+/// This prevents memory exhaustion from malicious or very large requests
+const MAX_REQUEST_BODY_SIZE: usize = 16 * 1024 * 1024;
 use bytes::Bytes;
 use futures::{
     stream::{self, once},
@@ -28,15 +32,26 @@ use leptos_router::{
 };
 use mime_guess::MimeGuess;
 use routefinder::Router;
-use server_fn::{
-    codec::Encoding, http_export::Request, middleware::Service,
-    response::generic::Body as ServerFnBody, ServerFn, ServerFnTraitObj,
-};
-use std::sync::Arc;
+use server_fn::{response::generic::Body, Protocol};
+
+use http::Request;
+use server_fn::ServerFn;
+use std::{future::Future, pin::Pin, sync::Arc};
 use thiserror::Error;
 use wasi::http::types::{
     IncomingRequest, OutgoingBody, OutgoingResponse, ResponseOutparam,
 };
+
+/// We use a type-erased alias to define the server function handler's type.
+/// It replaces `ServerFnTraitObj` because that type has strict constraints.
+/// Takes a Request<Body> and returns a pinned future that outputs Response<Body>
+type ServerFnHandler = Box<
+    dyn Fn(
+            Request<Body>,
+        )
+            -> Pin<Box<dyn Future<Output = http::Response<Body>> + Send>>
+        + Send,
+>;
 
 /// Handle routing, static file serving and response tx using the low-level
 /// `wasi:http` APIs.
@@ -74,8 +89,7 @@ pub struct Handler {
     res_out: ResponseOutparam,
 
     // *shortcut* if any is set
-    server_fn:
-        Option<ServerFnTraitObj<Request<Bytes>, http::Response<ServerFnBody>>>,
+    server_fn: Option<ServerFnHandler>,
     preset_res: Option<Response>,
     should_404: bool,
 
@@ -111,29 +125,167 @@ impl Handler {
     /// Tests if the request path matches the bound server function
     /// and *shortcut* the [`Handler`] to quickly reach
     /// the call to [`Handler::handle_with_context`].
-    pub fn with_server_fn<T>(mut self) -> Self
+    ///
+    /// # Request Body Support
+    /// Fully supports both synchronous and asynchronous request bodies:
+    /// - Sync bodies: Passed through directly for optimal performance
+    /// - Async bodies: Automatically collected (max 16MB) with proper error handling
+    ///
+    /// Note: You may need to specify the body type explicitly:
+    /// `.with_server_fn::<MyServerFn, _>()`
+    ///
+    /// For most use cases, prefer the convenience methods:
+    /// - `.with_server_fn_axum::<MyServerFn>()` (most common)
+    /// - `.with_server_fn_generic::<MyServerFn>()` (other backends)
+    pub fn with_server_fn<T, ServerBody>(mut self) -> Self
     where
-        T: ServerFn<
-                ServerRequest = Request<Bytes>,
-                ServerResponse = http::Response<ServerFnBody>,
-            > + 'static,
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<ServerBody>,
+            Response = http::Response<ServerBody>,
+        >,
+        ServerBody: Into<crate::response::Body> + From<Bytes> + 'static,
     {
         if self.shortcut() {
             return self;
         }
 
-        if self.req.method() == T::InputEncoding::METHOD
+        if self.req.method()
+            == <T::Protocol as Protocol<
+                T,
+                T::Output,
+                T::Client,
+                T::Server,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+            >>::METHOD
             && self.req.uri().path() == T::PATH
         {
-            self.server_fn = Some(ServerFnTraitObj::new(
-                T::PATH,
-                T::InputEncoding::METHOD,
-                |request| Box::pin(T::run_on_server(request)),
-                T::middlewares,
-            ));
+            // We can't use ServerFnTraitObj::new due to type constraints
+            // Instead, create a boxed function that calls the server function
+            self.server_fn = Some(Box::new(move |request| {
+                Box::pin(async move {
+                    // Convert Request<Body> to Request<ServerBody>
+                    let (parts, body) = request.into_parts();
+                    let server_body = match body {
+                        Body::Sync(bytes) => ServerBody::from(bytes),
+                        Body::Async(mut stream) => {
+                            // Collect the async stream into bytes
+                            // This is necessary because server functions expect a complete body
+                            use futures::StreamExt;
+                            let mut collected_bytes = Vec::new();
+
+                            while let Some(chunk_result) = stream.next().await {
+                                match chunk_result {
+                                    Ok(chunk) => {
+                                        // Check size limit before adding chunk
+                                        if collected_bytes.len() + chunk.len() > MAX_REQUEST_BODY_SIZE {
+                                            let error_msg = format!(
+                                                "Request body too large (max: {} bytes)",
+                                                MAX_REQUEST_BODY_SIZE
+                                            );
+                                            let error_response = http::Response::builder()
+                                                .status(413) // Payload Too Large
+                                                .body(Body::Sync(Bytes::from(error_msg)))
+                                                .unwrap();
+                                            return error_response;
+                                        }
+                                        collected_bytes.extend_from_slice(&chunk);
+                                    }
+                                    Err(e) => {
+                                        // Handle stream errors by returning an error response
+                                        let error_msg = format!("Failed to read request body: {}", e);
+                                        let error_response = http::Response::builder()
+                                            .status(400)
+                                            .body(Body::Sync(Bytes::from(error_msg)))
+                                            .unwrap();
+                                        return error_response;
+                                    }
+                                }
+                            }
+
+                            ServerBody::from(Bytes::from(collected_bytes))
+                        }
+                    };
+
+                    let server_request = Request::from_parts(parts, server_body);
+                    let response = T::run_on_server(server_request).await;
+                    // Convert Response<ServerBody> to Response<server_fn::response::generic::Body>
+                    response.map(|body| {
+                        let our_body: crate::response::Body = body.into();
+                        match our_body {
+                            crate::response::Body::Sync(bytes) => {
+                                Body::Sync(bytes)
+                            }
+                            crate::response::Body::Async(stream) => {
+                                Body::Async(stream)
+                            }
+                        }
+                    })
+                })
+            }));
         }
 
         self
+    }
+
+    /// Convenience method for server functions using the generic server_fn body.
+    /// This works with backends that use `server_fn::response::generic::Body`.
+    ///
+    /// Note: Most leptos projects use the axum backend, so you probably want
+    /// `with_server_fn_axum` instead.
+    ///
+    /// # Example
+    /// ```ignore
+    /// handler.with_server_fn_generic::<UpdateCount>()
+    /// ```
+    pub fn with_server_fn_generic<T>(self) -> Self
+    where
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<server_fn::response::generic::Body>,
+            Response = http::Response<server_fn::response::generic::Body>,
+        >,
+    {
+        self.with_server_fn::<T, server_fn::response::generic::Body>()
+    }
+
+    /// Convenience method for server functions using the axum backend.
+    /// This is the recommended method for most leptos projects as it avoids
+    /// needing to specify the body type parameter.
+    ///
+    /// # Request Body Handling
+    /// Supports both sync and async request bodies:
+    /// - Sync bodies are passed through directly
+    /// - Async bodies are collected into memory (max 16MB) before processing
+    ///
+    /// # Example
+    /// ```ignore
+    /// handler.with_server_fn_axum::<UpdateCount>()
+    /// ```
+    /// instead of:
+    /// ```ignore
+    /// handler.with_server_fn::<UpdateCount, _>()
+    /// ```
+    pub fn with_server_fn_axum<T>(self) -> Self
+    where
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<axum_core::body::Body>,
+            Response = http::Response<axum_core::body::Body>,
+        >,
+    {
+        self.with_server_fn::<T, axum_core::body::Body>()
     }
 
     /// If the request is prefixed with `prefix` [`Uri`], then
@@ -147,7 +299,10 @@ impl Handler {
     pub fn static_files_handler<T>(
         mut self,
         prefix: T,
-        handler: impl Fn(String) -> Option<Body> + 'static + Send + Clone,
+        handler: impl Fn(String) -> Option<crate::response::Body>
+            + 'static
+            + Send
+            + Clone,
     ) -> Self
     where
         T: TryInto<Uri>,
@@ -174,7 +329,7 @@ impl Handler {
                         .expect("internal error: could not parse MIME type"),
                     );
 
-                    self.preset_res = Some(Response(res));
+                    self.preset_res = Some(res.into());
                 }
             }
         }
@@ -259,8 +414,8 @@ impl Handler {
             .into_iter()
             .flat_map(IntoRouteListing::into_route_listing)
             .filter(|route| {
-                excluded_routes.as_ref().map_or(true, |excluded_routes| {
-                    !excluded_routes.iter().any(|ex_path| *ex_path == route.0)
+                excluded_routes.as_ref().is_none_or(|excluded_routes| {
+                    !excluded_routes.contains(&route.0)
                 })
             });
 
@@ -301,7 +456,7 @@ impl Handler {
                         None
                     } else if self.preset_res.is_some() {
                         self.preset_res
-                    } else if let Some(mut sfn) = self.server_fn {
+                    } else if let Some(sfn) = self.server_fn {
                         provide_contexts(additional_context, context_parts, res_opts.clone());
 
                         // store Accepts and Referer in case we need them for redirect (below)
@@ -313,7 +468,10 @@ impl Handler {
                             .unwrap_or(false);
                         let referrer = req.headers().get(REFERER).cloned();
 
-                        let mut res = sfn.run(req).await;
+                        // Call the server function directly
+                        // Convert Request<Bytes> to Request<Body>
+                        let req_with_body = req.map(Body::from);
+                        let mut res = sfn(req_with_body).await;
 
                         // if it accepts text/html (i.e., is a plain form post) and doesn't already have a
                         // Location set, then redirect to to Referer
@@ -349,7 +507,7 @@ impl Handler {
                                 additional_context,
                                 res_opts.clone(),
                                 match listing.mode() {
-                                    SsrMode::Async => |app, chunks| {
+                                    SsrMode::Async => |app, chunks, _| {
                                         Box::pin(async move {
                                             let app = if cfg!(feature = "islands-router") {
                                                 app.to_html_stream_in_order_branching()
@@ -362,7 +520,7 @@ impl Handler {
                                                 as PinnedStream<String>
                                         })
                                     },
-                                    SsrMode::InOrder => |app, chunks| {
+                                    SsrMode::InOrder => |app, chunks, _| {
                                         Box::pin(async move {
                                             let app = if cfg!(feature = "islands-router") {
                                                 app.to_html_stream_in_order_branching()
@@ -373,7 +531,7 @@ impl Handler {
                                         })
                                     },
                                     SsrMode::PartiallyBlocked | SsrMode::OutOfOrder => {
-                                        |app, chunks| {
+                                        |app, chunks, _| {
                                             Box::pin(async move {
                                                 let app = if cfg!(feature = "islands-router") {
                                                     app.to_html_stream_out_of_order_branching()
@@ -389,6 +547,8 @@ impl Handler {
                                         panic!("SsrMode::Static routes are not supported yet!")
                                     }
                                 },
+                                // Add the 6th parameter for out-of-order streaming support
+                                cfg!(feature = "islands-router"),
                             )
                             .await,
                         )
@@ -406,9 +566,10 @@ impl Handler {
 
         let response = response.unwrap_or_else(|| {
             let body = Bytes::from("404 not found");
-            let mut res = http::Response::new(Body::Sync(body));
+            let mut res =
+                http::Response::new(crate::response::Body::Sync(body));
             *res.status_mut() = http::StatusCode::NOT_FOUND;
-            Response(res)
+            res.into()
         });
 
         let headers = response.headers()?;
@@ -424,8 +585,10 @@ impl Handler {
             .write()
             .expect("unable to open writable stream on body");
         let mut input_stream = match response.0.into_body() {
-            Body::Sync(buf) => Box::pin(stream::once(async { Ok(buf) })),
-            Body::Async(stream) => stream,
+            crate::response::Body::Sync(buf) => {
+                Box::pin(stream::once(async { Ok(buf) }))
+            }
+            crate::response::Body::Async(stream) => stream,
         };
 
         while let Some(buf) = input_stream.next().await {
@@ -506,7 +669,9 @@ impl RouterPathRepresentation for Vec<PathSegment> {
                 }
                 PathSegment::Unit => {}
                 PathSegment::OptionalParam(_) => {
-                    eprintln!("to_rf_str_representation should only be called on expanded paths, which do not have OptionalParam any longer");
+                    eprintln!(
+                        "to_rf_str_representation should only be called on expanded paths, which do not have OptionalParam any longer"
+                    );
                     Default::default()
                 }
             }

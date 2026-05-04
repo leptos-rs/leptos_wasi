@@ -2,7 +2,7 @@
 # to follow the same conventions across the organisation.
 
 # Stable options
-edition = "2021"
+edition = "2024"
 max_width = 80
 
 # Unstable options

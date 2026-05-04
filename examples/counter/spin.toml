@@ -1,0 +1,30 @@
+spin_manifest_version = 2
+
+[application]
+name = "counter"
+version = "0.2.0"
+authors = ["Uriah Galang <codeitlikemiley@gmail.com>"]
+description = "Example project showing off Leptos with Axum, running as a `wasi:http` service."
+
+[[trigger.http]]
+route = "/..."
+component = "counter"
+
+[component.counter]
+source = "target/wasm32-wasip2/release/counter.wasm"
+allowed_outbound_hosts = []
+key_value_stores = ["default"]
+files = [{ source = ".", destination = "/" } ]
+
+[component.counter.build]
+command = "WASI_RUNTIME=spin cargo leptos build --release && WASI_RUNTIME=spin LEPTOS_OUTPUT_NAME=counter cargo build --lib --target wasm32-wasip2 --release --no-default-features --features ssr"
+watch = ["src/**/*.rs", "Cargo.toml"]
+
+
+[[trigger.http]]
+route = "/pkg/..."
+component = "counter-pkg"
+
+[component.counter-pkg]
+source = { url = "https://github.com/fermyon/spin-fileserver/releases/download/v0.1.0/spin_static_fs.wasm", digest = "sha256:96c76d9af86420b39eb6cd7be5550e3cb5d4cc4de572ce0fd1f6a29471536cb4" }
+files = [{ source = "target/site/pkg", destination = "/" }]

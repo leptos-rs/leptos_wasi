@@ -64,6 +64,88 @@ impl From<ServerFnBody> for Body {
     }
 }
 
+impl From<Bytes> for Body {
+    fn from(value: Bytes) -> Self {
+        Self::Sync(value)
+    }
+}
+
+// Support for different server backend body types
+
+// For axum backend, the body type is typically http_body_util::combinators::BoxBody
+// with specific error types
+impl
+    From<
+        http_body_util::combinators::BoxBody<
+            bytes::Bytes,
+            Box<dyn std::error::Error + Send + Sync>,
+        >,
+    > for Body
+{
+    fn from(
+        value: http_body_util::combinators::BoxBody<
+            bytes::Bytes,
+            Box<dyn std::error::Error + Send + Sync>,
+        >,
+    ) -> Self {
+        use http_body_util::BodyExt;
+
+        // Convert BoxBody to async stream of bytes
+        let stream = async_stream::stream! {
+            let mut body = value;
+            while let Some(frame_result) = body.frame().await {
+                match frame_result {
+                    Ok(frame) => {
+                        if let Some(data) = frame.data_ref() {
+                            yield Ok(data.clone());
+                        }
+                    }
+                    Err(e) => {
+                        // Convert Box<dyn Error + Send + Sync> to throw_error::Error
+                        // We use std::io::Error as an intermediate since boxed trait objects
+                        // don't implement std::error::Error themselves
+                        yield Err(throw_error::Error::from(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!("Body frame error: {}", e)
+                        )));
+                    }
+                }
+            }
+        };
+
+        Self::Async(Box::pin(stream))
+    }
+}
+
+// Handle the axum_core body type which is used by server functions with axum backend
+// This corresponds to leptos::server_fn::axum::body::Body in the error messages
+impl From<axum_core::body::Body> for Body {
+    fn from(value: axum_core::body::Body) -> Self {
+        use http_body_util::BodyExt;
+
+        // Convert axum_core::Body to async stream of bytes
+        let stream = async_stream::stream! {
+            let mut body = value;
+            while let Some(frame_result) = body.frame().await {
+                match frame_result {
+                    Ok(frame) => {
+                        if let Some(data) = frame.data_ref() {
+                            yield Ok(data.clone());
+                        }
+                    }
+                    Err(e) => {
+                        // Convert axum_core::Error to throw_error::Error
+                        // axum_core::Error implements std::error::Error so this works directly
+                        yield Err(throw_error::Error::from(e));
+                    }
+                }
+            }
+        };
+
+        Self::Async(Box::pin(stream))
+    }
+}
+
 /// This struct lets you define headers and override the status of the Response from an Element or a Server Function
 /// Typically contained inside of a ResponseOptions. Setting this is useful for cookies and custom responses.
 #[derive(Debug, Clone, Default)]

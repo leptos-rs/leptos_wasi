@@ -9,11 +9,11 @@
 //!
 //! It expects being run in the context of a Future Executor `Task`,
 //! since WASI is, at the moment, a single-threaded environment,
-//! we provide a simple abstraction in the form of [`leptos::spawn::Executor`]
+//! we provide a simple abstraction in the form of [`any_spawner::Executor`]
 //! that you can leverage to use this crate.
 //!
 //! ```
-//! use leptos::task::Executor;
+//! use any_spawner::Executor;
 //! use leptos_wasi::prelude::WasiExecutor;
 //! use wasi::exports::http::incoming_handler::*;
 //!

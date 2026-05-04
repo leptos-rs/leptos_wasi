@@ -48,15 +48,98 @@ community-driven project and be battle-tested to be deemed *production-ready*.
 
 Contributions are welcome!
 
+## Compatibility
+
+- leptos `0.8.9` fully tested
+- spin_sdk `5` fully test
+
 ## Usage
 
-TODO: Write a template starter for the crate.
+### Quick Start
 
-### Compatibility
+```rust
+use leptos_wasi::prelude::*;
 
-This crate only works with the future **Leptos v0.7**.
+// Server function example
+#[server(UpdateCount, "/api")]
+pub async fn update_count() -> Result<i32, ServerFnError> {
+    // Your server logic here
+    Ok(42)
+}
 
-## Features
+// Handler setup
+Handler::build(request, response_out)?
+    .static_files_handler("/public", serve_static_files)
+    .with_server_fn_axum::<UpdateCount>()  // Clean syntax!
+    .generate_routes(App)
+    .handle_with_context(app_fn, additional_context)
+    .await?;
+```
+
+### Server Function Registration
+
+This crate provides multiple convenient ways to register server functions:
+
+#### 🎯 **Recommended: Axum Backend (Most Common)**
+```rust
+.with_server_fn_axum::<MyServerFn>()
+```
+Perfect for most Leptos projects using the default axum backend.
+
+#### 🔧 **Generic Backend**
+```rust
+.with_server_fn_generic::<MyServerFn>()
+```
+For projects using custom server backends.
+
+#### 🛠️ **Advanced: Explicit Control**
+```rust
+.with_server_fn::<MyServerFn, BodyType>()
+```
+When you need full control over body types.
+
+### Static File Serving
+
+```rust
+fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
+    // Your static file serving logic
+    // Return None for 404, Some(body) for file content
+}
+
+handler.static_files_handler("/public", serve_static_files)
+```
+
+## Migration Guide
+
+### Upgrading to v0.2.0+
+
+If you're using the older syntax with type placeholders, you can easily upgrade:
+
+#### Before (v0.1.3 and earlier)
+
+```rust
+.with_server_fn::<GetCount>()
+```
+
+#### After (v0.2.0+)
+```rust
+.with_server_fn::<GetCount,_>() // for custom backend ResponseBody
+.with_server_fn_axum::<UpdateCount>() 
+.with_server_fn_generic::<GetCount>()
+```
+
+### Static File Handler Updates
+
+The static file handler now expects `leptos_wasi::response::Body` directly:
+
+```rust
+// Updated signature
+fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
+    // Implementation remains the same
+}
+```
+
+## Core Features
 
 * :octopus: **Async Runtime**: This crate comes with a single-threaded *async* executor
   making full use of WASIp2 [`pollable`][wasip2-pollable], so your server is not
@@ -69,6 +152,30 @@ This crate only works with the future **Leptos v0.7**.
   [`wasi:blobstore`][wasi-blobstore] matures up, you could host your static assets
   on your favorite *Object Storage* provider and make your server fetch them
   seamlessly.
+* :gear: **Multiple Server Backends**: Works seamlessly with axum, generic, and custom server function backends.
+
+## Troubleshooting
+
+### Common Issues
+
+#### Server function not found (404)
+Ensure your server function is properly registered:
+```rust
+.with_server_fn_axum::<YourServerFn>()  // Must match your #[server] macro
+```
+
+### Build Commands
+
+```bash
+# Build for WASI target
+cargo build --target wasm32-wasip2
+
+# Run with wasmtime
+wasmtime serve target/wasm32-wasip2/release/your_crate.wasm -Scommon
+
+# For leptos projects
+cargo leptos build --release
+```
 
 [leptos-ssr-modes]: https://book.leptos.dev/ssr/23_ssr_modes.html
 [wasip2-pollable]: https://github.com/WebAssembly/wasi-io/blob/main/wit/poll.wit

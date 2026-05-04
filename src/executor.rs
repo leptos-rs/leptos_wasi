@@ -26,7 +26,7 @@ use futures::{
     task::{LocalSpawnExt, SpawnExt},
     FutureExt, Stream,
 };
-use leptos::task::{any_spawner, CustomExecutor};
+use any_spawner::CustomExecutor;
 use parking_lot::Mutex;
 use std::{
     cell::RefCell,

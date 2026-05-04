@@ -1,0 +1,77 @@
+[package]
+name = "counter"
+version = "0.1.0"
+edition = "2024"
+authors = ["codeitlikemiley <codeitlikemiley@gmail.com>"]
+description = "A Leptos application running as a WASI Component"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+any_spawner = { version = "0.3.0", features = ["futures-executor"] }
+bytes = "1.10.1"
+cfg-if = "1"
+console_error_panic_hook = "0.1"
+futures = "0.3.30"
+hydration_context = { version = "0.3.0" }
+leptos = { version = "0.8.9"  }
+leptos_meta = { version = "0.8.5" }
+leptos_router = { version = "0.8.7" }
+leptos_wasi = { git = "https://github.com/codeitlikemiley/leptos_wasi", optional = true }
+server_fn = { version = "0.8.7", features = ["axum-no-default"] }
+spin-sdk = { version = "5", optional = true }
+wasi = { version = "0.13.1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true } 
+
+[features]
+# This is your client-side feature.
+hydrate = [
+  "leptos/hydrate",
+  "dep:wasm-bindgen",
+]
+
+# This is your server-side feature.
+ssr = [
+  "leptos/ssr",
+  "leptos_meta/ssr",
+  "leptos_router/ssr",
+  "dep:leptos_wasi",
+  "dep:spin-sdk",
+  "dep:wasi",
+]
+
+# Defines a size-optimized profile for the WASM bundle in release mode.
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[package.metadata.leptos]
+tailwind-input-file = "input.css"
+assets-dir = "public"
+
+# == Hydrate (client)
+lib-profile-release = "wasm-release"
+lib-features = ["hydrate"]
+
+# ==== Rebuild the std crates using the optimized profile.
+lib-cargo-args = [
+    # "-Zbuild-std=std,panic_abort,core,alloc",
+    # "-Zbuild-std-features=panic_immediate_abort",
+]
+
+# == SSR
+bin-profile-release = "wasm-release"
+bin-target-triple = "wasm32-wasip2"
+bin-features = ["ssr"]
+bin-target-dir = "target/server"
+
+# ==== Rebuild the std crates using the optimized profile.
+bin-cargo-args = [
+    # "-Zbuild-std=std,panic_abort,core,alloc",
+    # "-Zbuild-std-features=panic_immediate_abort,wasi_ext",
+]

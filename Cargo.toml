@@ -1,29 +1,33 @@
 [package]
 name = "leptos_wasi"
-authors = ["Enzo Nocera"]
+authors = ["Enzo Nocera","Uriah Galang"]
 license = "MIT"
 repository = "https://github.com/leptos-rs/leptos_wasi"
 description = "WASI integrations for the Leptos web framework."
-version = "0.1.3"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 
 [dependencies]
-throw_error = { version = "0.2.0" }
-hydration_context = { version = "0.2.0" }
+throw_error = { version = "0.3.0" }
+hydration_context = { version = "0.3.0" }
 futures = "0.3.30"
 wasi = "0.13.1+wasi-0.2.0"
-leptos = { version = "0.7.0",  features = ["nonce", "ssr"] }
-leptos_meta = { version = "0.7.0",  features = ["ssr"] }
-leptos_router ={ version = "0.7.0",  features = ["ssr"] }
-leptos_macro ={ version = "0.7.0",  features = ["generic"] }
-leptos_integration_utils = { version = "0.7.0" }
-server_fn = { version = "0.7.0",  features = ["generic"] }
+leptos = { version = "0.8.9",  features = ["nonce", "ssr"] }
+leptos_meta = { version = "0.8.5",  features = ["ssr"] }
+leptos_router = { version = "0.8.7",  features = ["ssr"] }
+leptos_macro = { version = "0.8.8",  features = ["generic"] }
+leptos_integration_utils = { version = "0.8.5" }
+server_fn = { version = "0.8.7",  features = ["generic","axum-no-default"] , default-features = false}
+any_spawner = { version = "0.3.0", features = ["futures-executor"] }
 http = "1.1.0"
+http-body-util = "0.1.3"
 parking_lot = "0.12.3"
 bytes = "1.7.2"
 routefinder = "0.5.4"
 mime_guess = "2.0"
 thiserror = "2"
+async-stream = "0.3.6"
+axum-core = "0.5.2"
 
 [features]
 islands-router = []
