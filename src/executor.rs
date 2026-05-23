@@ -20,7 +20,7 @@
 //! [`Mode`] enum to trade-off reactivity for less host context switch
 //! with the [`Mode::Stalled`] variant.
 
-#[cfg(feature = "wasi-p2")]
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 mod p2 {
 use futures::{
     channel::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -284,7 +284,7 @@ impl CustomExecutor for Executor {
 }
 }
 
-#[cfg(feature = "wasi-p2")]
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 pub use p2::*;
 
 #[cfg(feature = "wasi-p3")]

@@ -1,4 +1,4 @@
-#[cfg(feature = "wasi-p2")]
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 mod p2 {
 use crate::CHUNK_BYTE_SIZE;
 use bytes::Bytes;
