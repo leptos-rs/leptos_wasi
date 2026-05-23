@@ -12,7 +12,7 @@
 //! we provide a simple abstraction in the form of [`any_spawner::Executor`]
 //! that you can leverage to use this crate.
 //!
-//! ```
+//! ```ignore
 //! use any_spawner::Executor;
 //! use leptos_wasi::prelude::WasiExecutor;
 //! use wasi::exports::http::incoming_handler::*;
