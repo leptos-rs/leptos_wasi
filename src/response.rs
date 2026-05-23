@@ -5,6 +5,7 @@ use leptos_integration_utils::ExtendResponse;
 use parking_lot::RwLock;
 use server_fn::response::generic::Body as ServerFnBody;
 use std::{pin::Pin, sync::Arc};
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 use thiserror::Error;
 #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 use wasi::http::types::{HeaderError, Headers};

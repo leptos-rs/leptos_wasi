@@ -50,30 +50,89 @@ Contributions are welcome!
 
 ## Compatibility
 
-- leptos `0.8.9` fully tested
-- spin_sdk `5` fully test
+- **Leptos:** `0.8.9` fully tested.
+- **Spin SDK:** `v6.0.0` (WASIp3) and `v5.x` (WASIp2) fully tested.
+- **WASI Features:**
+  - `wasi-p2` (Default): Built-in cooperative async polling executor.
+  - `wasi-p3`: Native host-level task spawning utilizing `wasip3::wit_bindgen::spawn`.
+
+## Feature Flags
+
+Add the following to your `Cargo.toml`:
+
+```toml
+[dependencies]
+# For WASI Preview 2 (default):
+leptos_wasi = "0.2.0"
+
+# For WASI Preview 3:
+leptos_wasi = { version = "0.2.0", default-features = false, features = ["wasi-p3"] }
+```
 
 ## Usage
 
-### Quick Start
+### 1. WASI Preview 3 (WASIp3) Mode
+
+Under WASIp3, task spawning is handled natively by the host runtime, so you do not need to run a guest-side cooperative polling loop. Simply register the spawner at the server entrypoint.
+
+#### Server Entrypoint (`src/server.rs`):
+```rust
+use leptos::config::get_configuration;
+use leptos_wasi::executor::init_wasip3_spawner;
+use spin_sdk::http::{Request, Response, IntoResponse};
+use spin_sdk::http_service;
+
+use crate::app::{shell, App, GetCount};
+
+#[http_service]
+async fn handle_request(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
+    // 1. Initialize the host-level task spawner
+    let _ = init_wasip3_spawner();
+    
+    let conf = get_configuration(None).unwrap();
+    let leptos_options = conf.leptos_options;
+
+    // 2. Build and handle request natively
+    let wasi_res = Handler::build(req).await?
+        .with_server_fn_axum::<GetCount>()
+        .generate_routes(App)
+        .handle_with_context(move || shell(leptos_options.clone()), || {})
+        .await?;
+
+    let res = wasip3::http_compat::http_from_wasi_response(wasi_res)?;
+    Ok(res)
+}
+```
+
+### 2. WASI Preview 2 (WASIp2) Mode
+
+Under WASIp2, you must instantiate the custom `WasiExecutor` and block the guest execution thread on the cooperative polling loop to drive async futures.
 
 ```rust
-use leptos_wasi::prelude::*;
+use any_spawner::Executor as LeptosExecutor;
+use leptos_wasi::prelude::{IncomingRequest, ResponseOutparam, WasiExecutor};
+use wasi::exports::http::incoming_handler::Guest;
 
-// Server function example
-#[server(UpdateCount, "/api")]
-pub async fn update_count() -> Result<i32, ServerFnError> {
-    // Your server logic here
-    Ok(42)
+struct LeptosServer;
+
+impl Guest for LeptosServer {
+    fn handle(request: IncomingRequest, response_out: ResponseOutparam) {
+        // Initialize guest-side polling executor
+        let executor = WasiExecutor::new(leptos_wasi::executor::Mode::Stalled);
+        LeptosExecutor::init_local_custom_executor(executor.clone()).unwrap();
+
+        executor.run_until(async {
+            Handler::build(request, response_out).unwrap()
+                .with_server_fn_axum::<GetCount>()
+                .generate_routes(App)
+                .handle_with_context(move || shell(leptos_options.clone()), || {})
+                .await
+                .unwrap();
+        })
+    }
 }
 
-// Handler setup
-Handler::build(request, response_out)?
-    .static_files_handler("/public", serve_static_files)
-    .with_server_fn_axum::<UpdateCount>()  // Clean syntax!
-    .generate_routes(App)
-    .handle_with_context(app_fn, additional_context)
-    .await?;
+wasi::http::proxy::export!(LeptosServer with_types_in wasi);
 ```
 
 ### Server Function Registration

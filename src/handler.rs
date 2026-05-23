@@ -3,17 +3,20 @@
 use crate::{
     response::{Response, ResponseOptions},
     utils::redirect,
-    CHUNK_BYTE_SIZE,
 };
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+use crate::CHUNK_BYTE_SIZE;
 
 /// Maximum size for request bodies when collecting async streams (16MB)
 /// This prevents memory exhaustion from malicious or very large requests
 const MAX_REQUEST_BODY_SIZE: usize = 16 * 1024 * 1024;
 use bytes::Bytes;
 use futures::{
-    stream::{self, once},
+    stream::once,
     StreamExt,
 };
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+use futures::stream;
 use http::{
     header::{ACCEPT, LOCATION, REFERER},
     request::Parts,

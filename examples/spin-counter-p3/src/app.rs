@@ -33,7 +33,7 @@ pub fn App() -> impl IntoView {
     let fallback = || view! { "Page not found." }.into_view();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/spin_counter.css" />
+        <Stylesheet id="leptos" href="/pkg/spin_counter_p3.css" />
         <Meta
             name="description"
             content="A website running its server-side as a WASI Component :D"

@@ -9,6 +9,7 @@ description = ""
 [[trigger.http]]
 route = "/..."
 component = "spin-counter-p3"
+executor = { type = "http" }
 
 [component.spin-counter-p3]
 source = "target/wasm32-wasip2/release/spin_counter_p3.wasm"
