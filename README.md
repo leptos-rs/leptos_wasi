@@ -69,6 +69,9 @@ leptos_wasi = "0.2.0"
 leptos_wasi = { version = "0.2.0", default-features = false, features = ["wasi-p3"] }
 ```
 
+> [!NOTE]
+> Compiling with both features enabled simultaneously (e.g. `--all-features` in workspaces) is fully supported. When both `wasi-p2` and `wasi-p3` flags are active, the `wasi-p3` pipeline and native host spawning take precedence automatically.
+
 ## Usage
 
 ### 1. WASI Preview 3 (WASIp3) Mode
