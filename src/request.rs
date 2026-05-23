@@ -1,3 +1,5 @@
+#[cfg(feature = "wasi-p2")]
+mod p2 {
 use crate::CHUNK_BYTE_SIZE;
 use bytes::Bytes;
 use http::{uri::Parts, Uri};
@@ -112,3 +114,24 @@ pub fn scheme_wasi_to_http(
             .map_err(http::Error::from),
     }
 }
+}
+
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+pub use p2::*;
+
+#[cfg(feature = "wasi-p3")]
+mod p3 {
+    use wasip3::http::types::Request as WasiRequest;
+    use thiserror::Error;
+
+    pub struct Request(pub WasiRequest);
+
+    #[derive(Error, Debug)]
+    pub enum RequestError {
+        #[error("wasi request conversion error: {0:?}")]
+        Wasi(wasip3::http::types::ErrorCode),
+    }
+}
+
+#[cfg(feature = "wasi-p3")]
+pub use p3::*;

@@ -38,6 +38,7 @@ use http::Request;
 use server_fn::ServerFn;
 use std::{future::Future, pin::Pin, sync::Arc};
 use thiserror::Error;
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 use wasi::http::types::{
     IncomingRequest, OutgoingBody, OutgoingResponse, ResponseOutparam,
 };
@@ -84,6 +85,7 @@ type ServerFnHandler = Box<
 ///
 /// [`SsrMode::Static`] is not implemented yet, having one in your `<Router>`
 /// will cause [`Handler::handle_with_context`] to panic!
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 pub struct Handler {
     req: Request<Bytes>,
     res_out: ResponseOutparam,
@@ -97,6 +99,7 @@ pub struct Handler {
     ssr_router: Router<RouteListing>,
 }
 
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 impl Handler {
     /// Wraps the WASI resources to handle the request.
     /// Could fail if the [`IncomingRequest`] cannot be converted to
@@ -680,6 +683,7 @@ impl RouterPathRepresentation for Vec<PathSegment> {
     }
 }
 
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 #[derive(Error, Debug)]
 pub enum HandlerError {
     #[error("error handling request")]
@@ -696,4 +700,461 @@ pub enum HandlerError {
 
     #[error("failed to finish response body")]
     WasiResponseBody(wasi::http::types::ErrorCode),
+}
+
+#[cfg(feature = "wasi-p3")]
+pub struct Handler {
+    req: Request<Bytes>,
+
+    // *shortcut* if any is set
+    server_fn: Option<ServerFnHandler>,
+    preset_res: Option<Response>,
+    should_404: bool,
+
+    // built using the user-defined app_fn
+    ssr_router: Router<RouteListing>,
+}
+
+#[cfg(feature = "wasi-p3")]
+impl Handler {
+    pub async fn build(
+        req: Request<wasip3::http_compat::IncomingRequestBody>,
+    ) -> Result<Self, HandlerError> {
+        let (parts, body) = req.into_parts();
+
+        use http_body_util::BodyExt;
+        let body_bytes = body.collect().await
+            .map_err(|e| HandlerError::Request(crate::request::RequestError::Wasi(e)))?
+            .to_bytes();
+
+        let http_req = Request::from_parts(parts, body_bytes);
+
+        Ok(Self {
+            req: http_req,
+            server_fn: None,
+            preset_res: None,
+            ssr_router: Router::new(),
+            should_404: false,
+        })
+    }
+
+    #[inline]
+    const fn shortcut(&self) -> bool {
+        self.server_fn.is_some() || self.preset_res.is_some() || self.should_404
+    }
+
+    pub fn with_server_fn<T, ServerBody>(mut self) -> Self
+    where
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<ServerBody>,
+            Response = http::Response<ServerBody>,
+        >,
+        ServerBody: Into<crate::response::Body> + From<Bytes> + 'static,
+    {
+        if self.shortcut() {
+            return self;
+        }
+
+        if self.req.method()
+            == <T::Protocol as Protocol<
+                T,
+                T::Output,
+                T::Client,
+                T::Server,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+            >>::METHOD
+            && self.req.uri().path() == T::PATH
+        {
+            self.server_fn = Some(Box::new(move |request| {
+                Box::pin(async move {
+                    let (parts, body) = request.into_parts();
+                    let server_body = match body {
+                        Body::Sync(bytes) => ServerBody::from(bytes),
+                        Body::Async(mut stream) => {
+                            use futures::StreamExt;
+                            let mut collected_bytes = Vec::new();
+
+                            while let Some(chunk_result) = stream.next().await {
+                                match chunk_result {
+                                    Ok(chunk) => {
+                                        if collected_bytes.len() + chunk.len() > MAX_REQUEST_BODY_SIZE {
+                                            let error_msg = format!(
+                                                "Request body too large (max: {} bytes)",
+                                                MAX_REQUEST_BODY_SIZE
+                                            );
+                                            let error_response = http::Response::builder()
+                                                .status(413)
+                                                .body(Body::Sync(Bytes::from(error_msg)))
+                                                .unwrap();
+                                            return error_response;
+                                        }
+                                        collected_bytes.extend_from_slice(&chunk);
+                                    }
+                                    Err(e) => {
+                                        let error_msg = format!("Failed to read request body: {}", e);
+                                        let error_response = http::Response::builder()
+                                            .status(400)
+                                            .body(Body::Sync(Bytes::from(error_msg)))
+                                            .unwrap();
+                                        return error_response;
+                                    }
+                                }
+                            }
+
+                            ServerBody::from(Bytes::from(collected_bytes))
+                        }
+                    };
+
+                    let server_request = Request::from_parts(parts, server_body);
+                    let response = T::run_on_server(server_request).await;
+                    response.map(|body| {
+                        let our_body: crate::response::Body = body.into();
+                        match our_body {
+                            crate::response::Body::Sync(bytes) => {
+                                Body::Sync(bytes)
+                            }
+                            crate::response::Body::Async(stream) => {
+                                Body::Async(stream)
+                            }
+                        }
+                    })
+                })
+            }));
+        }
+
+        self
+    }
+
+    pub fn with_server_fn_generic<T>(self) -> Self
+    where
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<server_fn::response::generic::Body>,
+            Response = http::Response<server_fn::response::generic::Body>,
+        >,
+    {
+        self.with_server_fn::<T, server_fn::response::generic::Body>()
+    }
+
+    pub fn with_server_fn_axum<T>(self) -> Self
+    where
+        T: ServerFn + 'static,
+        T::Server: server_fn::server::Server<
+            T::Error,
+            T::InputStreamError,
+            T::OutputStreamError,
+            Request = Request<axum_core::body::Body>,
+            Response = http::Response<axum_core::body::Body>,
+        >,
+    {
+        self.with_server_fn::<T, axum_core::body::Body>()
+    }
+
+    pub fn static_files_handler<T>(
+        mut self,
+        prefix: T,
+        handler: impl Fn(String) -> Option<crate::response::Body>
+            + 'static
+            + Send
+            + Clone,
+    ) -> Self
+    where
+        T: TryInto<Uri>,
+        <T as TryInto<Uri>>::Error: std::error::Error,
+    {
+        if self.shortcut() {
+            return self;
+        }
+
+        if let Some(trimmed_url) = self.req.uri().path().strip_prefix(
+            prefix.try_into().expect("you passed an invalid Uri").path(),
+        ) {
+            match handler(trimmed_url.to_string()) {
+                None => self.should_404 = true,
+                Some(body) => {
+                    let mut res = http::Response::new(body);
+                    let mime = MimeGuess::from_path(trimmed_url);
+
+                    res.headers_mut().insert(
+                        http::header::CONTENT_TYPE,
+                        HeaderValue::from_str(
+                            mime.first_or_octet_stream().as_ref(),
+                        )
+                        .expect("internal error: could not parse MIME type"),
+                    );
+
+                    self.preset_res = Some(res.into());
+                }
+            }
+        }
+
+        self
+    }
+
+    pub fn generate_routes<IV>(
+        self,
+        app_fn: impl Fn() -> IV + 'static + Send + Clone,
+    ) -> Self
+    where
+        IV: IntoView + 'static,
+    {
+        self.generate_routes_with_exclusions_and_context(app_fn, None, || {})
+    }
+
+    pub fn generate_routes_with_context<IV>(
+        self,
+        app_fn: impl Fn() -> IV + 'static + Send + Clone,
+        additional_context: impl Fn() + 'static + Send + Clone,
+    ) -> Self
+    where
+        IV: IntoView + 'static,
+    {
+        self.generate_routes_with_exclusions_and_context(
+            app_fn,
+            None,
+            additional_context,
+        )
+    }
+
+    pub fn generate_routes_with_exclusions_and_context<IV>(
+        mut self,
+        app_fn: impl Fn() -> IV + 'static + Send + Clone,
+        excluded_routes: Option<Vec<String>>,
+        additional_context: impl Fn() + 'static + Send + Clone,
+    ) -> Self
+    where
+        IV: IntoView + 'static,
+    {
+        if self.shortcut() {
+            return self;
+        }
+
+        if !self.ssr_router.is_empty() {
+            panic!("generate_routes was called twice");
+        }
+
+        let owner = Owner::new_root(Some(Arc::new(SsrSharedContext::new())));
+        let routes = owner
+            .with(|| {
+                provide_context(RequestUrl::new(""));
+                let (mock_meta, _) = ServerMetaContext::new();
+                let (mock_parts, _) = Request::new("").into_parts();
+                provide_context(mock_meta);
+                provide_context(mock_parts);
+                provide_context(ResponseOptions::default());
+                additional_context();
+                RouteList::generate(&app_fn)
+            })
+            .unwrap_or_default()
+            .into_inner()
+            .into_iter()
+            .flat_map(IntoRouteListing::into_route_listing)
+            .filter(|route| {
+                excluded_routes.as_ref().is_none_or(|excluded_routes| {
+                    !excluded_routes.contains(&route.0)
+                })
+            });
+
+        for (path, route_listing) in routes {
+            self.ssr_router
+                .add(path, route_listing)
+                .expect("internal error: impossible to parse a RouteListing");
+        }
+
+        self
+    }
+
+    pub async fn handle_with_context<IV>(
+        self,
+        app: impl Fn() -> IV + 'static + Send + Clone,
+        additional_context: impl Fn() + 'static + Clone + Send,
+    ) -> Result<wasip3::http::types::Response, HandlerError>
+    where
+        IV: IntoView + 'static,
+    {
+        let path = self.req.uri().path().to_string();
+        let best_match = self.ssr_router.best_match(&path);
+        let (parts, body) = self.req.into_parts();
+        let context_parts = parts.clone();
+        let req = Request::from_parts(parts, body);
+
+        let owner = Owner::new();
+        let response = owner
+            .with(|| {
+                ScopedFuture::new(async move {
+                    let res_opts = ResponseOptions::default();
+                    let response: Option<Response> = if self.should_404 {
+                        None
+                    } else if self.preset_res.is_some() {
+                        self.preset_res
+                    } else if let Some(sfn) = self.server_fn {
+                        provide_contexts(additional_context, context_parts, res_opts.clone());
+
+                        let accepts_html = req
+                            .headers()
+                            .get(ACCEPT)
+                            .and_then(|v| v.to_str().ok())
+                            .map(|v| v.contains("text/html"))
+                            .unwrap_or(false);
+                        let referrer = req.headers().get(REFERER).cloned();
+
+                        let req_with_body = req.map(Body::from);
+                        let mut res = sfn(req_with_body).await;
+
+                        if accepts_html {
+                            if let Some(referrer) = referrer {
+                                let has_location = res.headers().get(LOCATION).is_some();
+                                if !has_location {
+                                    *res.status_mut() = StatusCode::FOUND;
+                                    res.headers_mut().insert(LOCATION, referrer);
+                                }
+                            }
+                        }
+
+                        Some(res.into())
+                    } else if let Some(best_match) = best_match {
+                        let listing = best_match.handler();
+                        let (meta_context, meta_output) = ServerMetaContext::new();
+
+                        let add_ctx = additional_context.clone();
+                        let additional_context = {
+                            let res_opts = res_opts.clone();
+                            let meta_ctx = meta_context.clone();
+                            move || {
+                                provide_contexts(add_ctx, context_parts, res_opts);
+                                provide_context(meta_ctx);
+                            }
+                        };
+
+                        Some(
+                            Response::from_app(
+                                app,
+                                meta_output,
+                                additional_context,
+                                res_opts.clone(),
+                                match listing.mode() {
+                                    SsrMode::Async => |app, chunks, _| {
+                                        Box::pin(async move {
+                                            let app = if cfg!(feature = "islands-router") {
+                                                app.to_html_stream_in_order_branching()
+                                            } else {
+                                                app.to_html_stream_in_order()
+                                            };
+                                            let app = app.collect::<String>().await;
+                                            let chunks = chunks();
+                                            Box::pin(once(async move { app }).chain(chunks))
+                                                as PinnedStream<String>
+                                        })
+                                    },
+                                    SsrMode::InOrder => |app, chunks, _| {
+                                        Box::pin(async move {
+                                            let app = if cfg!(feature = "islands-router") {
+                                                app.to_html_stream_in_order_branching()
+                                            } else {
+                                                app.to_html_stream_in_order()
+                                            };
+                                            Box::pin(app.chain(chunks())) as PinnedStream<String>
+                                        })
+                                    },
+                                    SsrMode::PartiallyBlocked | SsrMode::OutOfOrder => {
+                                        |app, chunks, _| {
+                                            Box::pin(async move {
+                                                let app = if cfg!(feature = "islands-router") {
+                                                    app.to_html_stream_out_of_order_branching()
+                                                } else {
+                                                    app.to_html_stream_out_of_order()
+                                                };
+                                                Box::pin(app.chain(chunks()))
+                                                    as PinnedStream<String>
+                                            })
+                                        }
+                                    }
+                                    SsrMode::Static(_) => {
+                                        panic!("SsrMode::Static routes are not supported yet!")
+                                    }
+                                },
+                                cfg!(feature = "islands-router"),
+                            )
+                            .await,
+                        )
+                    } else {
+                        None
+                    };
+
+                    response.map(|mut req| {
+                        req.extend_response(&res_opts);
+                        req
+                    })
+                })
+            })
+            .await;
+
+        let response = response.unwrap_or_else(|| {
+            let body = Bytes::from("404 not found");
+            let mut res =
+                http::Response::new(crate::response::Body::Sync(body));
+            *res.status_mut() = http::StatusCode::NOT_FOUND;
+            res.into()
+        });
+
+        let mapped_response = response.0.map(|body| {
+            use http_body_util::BodyExt;
+            body.map_frame(|frame| {
+                frame.map_data(|bytes| WasiBuf(bytes.to_vec()))
+            })
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        });
+
+        let wasi_res = wasip3::http_compat::http_into_wasi_response(mapped_response)
+            .map_err(HandlerError::Wasi)?;
+        Ok(wasi_res)
+    }
+}
+
+#[cfg(feature = "wasi-p3")]
+#[derive(Clone, Debug)]
+pub struct WasiBuf(pub Vec<u8>);
+
+#[cfg(feature = "wasi-p3")]
+impl bytes::Buf for WasiBuf {
+    fn remaining(&self) -> usize {
+        self.0.len()
+    }
+
+    fn chunk(&self) -> &[u8] {
+        &self.0
+    }
+
+    fn advance(&mut self, cnt: usize) {
+        self.0.drain(..cnt);
+    }
+}
+
+#[cfg(feature = "wasi-p3")]
+impl From<WasiBuf> for Vec<u8> {
+    fn from(buf: WasiBuf) -> Self {
+        buf.0
+    }
+}
+
+#[cfg(feature = "wasi-p3")]
+#[derive(Error, Debug)]
+pub enum HandlerError {
+    #[error("error handling request")]
+    Request(#[from] crate::request::RequestError),
+
+    #[error("response stream emitted an error")]
+    ResponseStream(throw_error::Error),
+
+    #[error("wasi http error: {0:?}")]
+    Wasi(wasip3::http::types::ErrorCode),
 }

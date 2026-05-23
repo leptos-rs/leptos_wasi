@@ -1,0 +1,4 @@
+target/
+.spin/
+*.lock
+.vscode

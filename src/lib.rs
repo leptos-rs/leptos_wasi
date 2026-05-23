@@ -47,13 +47,24 @@ pub mod utils;
 #[allow(clippy::pub_use)]
 pub mod prelude {
     pub use crate::{
-        executor::Executor as WasiExecutor, handler::Handler, response::Body,
+        handler::Handler, response::Body,
         utils::redirect,
     };
     pub use http::StatusCode;
+
+    #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+    pub use crate::executor::Executor as WasiExecutor;
+
+    #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
     pub use wasi::exports::wasi::http::incoming_handler::{
         IncomingRequest, ResponseOutparam,
     };
+
+    #[cfg(feature = "wasi-p3")]
+    pub use wasip3::http::types::Request as IncomingRequest;
+
+    #[cfg(feature = "wasi-p3")]
+    pub use crate::executor::init_wasip3_spawner;
 }
 
 /// When working with streams, this crate will try to chunk bytes with

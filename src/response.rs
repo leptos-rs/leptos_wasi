@@ -6,6 +6,7 @@ use parking_lot::RwLock;
 use server_fn::response::generic::Body as ServerFnBody;
 use std::{pin::Pin, sync::Arc};
 use thiserror::Error;
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 use wasi::http::types::{HeaderError, Headers};
 
 /// This crate uses platform-agnostic [`http::Response`]
@@ -18,6 +19,7 @@ use wasi::http::types::{HeaderError, Headers};
 /// (i.e. streaming the response).
 pub struct Response(pub http::Response<Body>);
 
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 impl Response {
     pub fn headers(&self) -> Result<Headers, ResponseError> {
         let headers = Headers::new();
@@ -215,9 +217,41 @@ impl ExtendResponse for Response {
     }
 }
 
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum ResponseError {
     #[error("failed to parse http::Response's headers")]
     WasiHeaders(#[from] HeaderError),
+}
+
+#[cfg(feature = "wasi-p3")]
+impl http_body::Body for Body {
+    type Data = Bytes;
+    type Error = throw_error::Error;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        match &mut *self {
+            Body::Sync(bytes) => {
+                if bytes.is_empty() {
+                    std::task::Poll::Ready(None)
+                } else {
+                    let data = std::mem::take(bytes);
+                    std::task::Poll::Ready(Some(Ok(http_body::Frame::data(data))))
+                }
+            }
+            Body::Async(stream) => {
+                match stream.as_mut().poll_next(cx) {
+                    std::task::Poll::Ready(Some(item)) => {
+                        std::task::Poll::Ready(Some(item.map(http_body::Frame::data)))
+                    }
+                    std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
+                    std::task::Poll::Pending => std::task::Poll::Pending,
+                }
+            }
+        }
+    }
 }

@@ -20,6 +20,8 @@
 //! [`Mode`] enum to trade-off reactivity for less host context switch
 //! with the [`Mode::Stalled`] variant.
 
+#[cfg(feature = "wasi-p2")]
+mod p2 {
 use futures::{
     channel::mpsc::{UnboundedReceiver, UnboundedSender},
     executor::{LocalPool, LocalSpawner},
@@ -280,3 +282,41 @@ impl CustomExecutor for Executor {
         }
     }
 }
+}
+
+#[cfg(feature = "wasi-p2")]
+pub use p2::*;
+
+#[cfg(feature = "wasi-p3")]
+mod p3 {
+    use any_spawner::CustomExecutor;
+
+    #[derive(Clone, Copy)]
+    pub struct Wasip3Executor;
+
+    impl CustomExecutor for Wasip3Executor {
+        fn spawn(&self, fut: any_spawner::PinnedFuture<()>) {
+            wasip3::wit_bindgen::spawn(fut);
+        }
+
+        fn spawn_local(&self, fut: any_spawner::PinnedLocalFuture<()>) {
+            wasip3::wit_bindgen::spawn(fut);
+        }
+
+        fn poll_local(&self) {
+            // No-op under WASIp3 as the host runtime manages execution.
+        }
+    }
+
+    pub fn init_wasip3_spawner() -> Result<(), any_spawner::ExecutorError> {
+        static INITIALIZED: std::sync::Once = std::sync::Once::new();
+        let mut res = Ok(());
+        INITIALIZED.call_once(|| {
+            res = any_spawner::Executor::init_local_custom_executor(Wasip3Executor);
+        });
+        res
+    }
+}
+
+#[cfg(feature = "wasi-p3")]
+pub use p3::*;
