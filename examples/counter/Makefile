@@ -34,7 +34,7 @@ wasmtime:
 	@echo "Starting Wasmtime HTTP server..."
 	@echo "Static files served from: target/site/pkg/"
 	@echo "Access at: http://127.0.0.1:3000"
-	wasmtime serve \
+	../../bin/wasmtime serve \
 		-S cli=y \
 		-S http=y \
 		--dir=./target/site/pkg::/ \

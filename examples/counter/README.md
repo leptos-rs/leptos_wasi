@@ -22,6 +22,10 @@ make wasmtime
 - Data stored in `data/` directory
 - Uses standard filesystem APIs
 
+## Local Binary Prerequisites
+
+The `Makefile` targets execute local binaries located in the `./bin/` directory at the project root (`../../bin/wasmtime` and `../../bin/spin`). If the binaries are not present, populate them by running the curl commands documented in the root [README](../../README.md#setting-up-local-binaries).
+
 
 ## Prerequisites
 
