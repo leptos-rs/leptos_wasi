@@ -19,7 +19,7 @@ hydration_context = { version = "0.3.0" }
 leptos = { version = "0.8.9" }
 leptos_meta = { version = "0.8.5" }
 leptos_router = { version = "0.8.7" }
-leptos_wasi = { path = "../..", default-features = false, features = ["wasi-p3"], optional = true }
+leptos_wasi = { path = "../..", default-features = false, features = ["wasip3"], optional = true }
 server_fn = { version = "0.8.7", features = ["axum-no-default"] }
 spin-sdk = { version = "6.0.0", optional = true }
 wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }

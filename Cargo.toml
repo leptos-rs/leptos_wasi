@@ -33,7 +33,7 @@ async-stream = "0.3.6"
 axum-core = "0.5.2"
 
 [features]
-default = ["wasi-p2"]
-wasi-p2 = ["dep:wasi"]
-wasi-p3 = ["dep:wasip3"]
+default = ["wasip2"]
+wasip2 = ["dep:wasi"]
+wasip3 = ["dep:wasip3"]
 islands-router = []

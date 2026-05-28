@@ -55,12 +55,12 @@ https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 leptos_wasi = "0.3.0"
 
 # WASI Preview 3 — native host-level task spawning:
-leptos_wasi = { version = "0.3.0", default-features = false, features = ["wasi-p3"] }
+leptos_wasi = { version = "0.3.0", default-features = false, features = ["wasip3"] }
 ```
 
 > [!NOTE]
 > Both features can be enabled simultaneously (`--all-features`). When both
-> `wasi-p2` and `wasi-p3` are active, the `wasi-p3` pipeline takes precedence.
+> `wasip2` and `wasip3` are active, the `wasip3` pipeline takes precedence.
 
 ## Quick Start
 

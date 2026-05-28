@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **Native WASI Preview 3 support** via the `wasi-p3` feature flag. Task spawning is delegated directly to the host runtime using `wasip3::wit_bindgen::spawn`, eliminating guest-side cooperative polling overhead.
+- **Native WASI Preview 3 support** via the `wasip3` feature flag. Task spawning is delegated directly to the host runtime using `wasip3::wit_bindgen::spawn`, eliminating guest-side cooperative polling overhead.
 - `init_wasip3_spawner()` public API for initializing the WASIp3 executor at the server entrypoint.
 - Async `Handler::build()` signature under WASIp3 (takes `http::Request` instead of WASI-specific request/response types).
 - Spin SDK v6 / Spin v4 compatibility with native WASIp3 HTTP triggers.

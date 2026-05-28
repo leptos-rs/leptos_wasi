@@ -5,9 +5,9 @@ use leptos_integration_utils::ExtendResponse;
 use parking_lot::RwLock;
 use server_fn::response::generic::Body as ServerFnBody;
 use std::{pin::Pin, sync::Arc};
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use thiserror::Error;
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use wasi::http::types::{HeaderError, Headers};
 
 /// This crate uses platform-agnostic [`http::Response`]
@@ -20,7 +20,7 @@ use wasi::http::types::{HeaderError, Headers};
 /// (i.e. streaming the response).
 pub struct Response(pub http::Response<Body>);
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 impl Response {
     pub fn headers(&self) -> Result<Headers, ResponseError> {
         let headers = Headers::new();
@@ -217,7 +217,7 @@ impl ExtendResponse for Response {
     }
 }
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum ResponseError {
@@ -225,7 +225,7 @@ pub enum ResponseError {
     WasiHeaders(#[from] HeaderError),
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 impl http_body::Body for Body {
     type Data = Bytes;
     type Error = throw_error::Error;

@@ -46,21 +46,21 @@ pub mod utils;
 
 #[allow(clippy::pub_use)]
 pub mod prelude {
-    #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+    #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
     pub use crate::executor::Executor as WasiExecutor;
-    #[cfg(feature = "wasi-p3")]
+    #[cfg(feature = "wasip3")]
     pub use crate::executor::init_wasip3_spawner;
     pub use crate::{handler::Handler, response::Body, utils::redirect};
     pub use http::StatusCode;
-    #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+    #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
     pub use wasi::exports::wasi::http::incoming_handler::{
         IncomingRequest, ResponseOutparam,
     };
-    #[cfg(feature = "wasi-p3")]
+    #[cfg(feature = "wasip3")]
     pub use wasip3::http::types::Request as IncomingRequest;
 }
 
 /// When working with streams, this crate will try to chunk bytes with
 /// this size.
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 const CHUNK_BYTE_SIZE: usize = 64;

@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use crate::CHUNK_BYTE_SIZE;
 use crate::{
     response::{Response, ResponseOptions},
@@ -11,7 +11,7 @@ use crate::{
 /// This prevents memory exhaustion from malicious or very large requests
 const MAX_REQUEST_BODY_SIZE: usize = 16 * 1024 * 1024;
 use bytes::Bytes;
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use futures::stream;
 use futures::{StreamExt, stream::once};
 use http::{
@@ -35,7 +35,7 @@ use routefinder::Router;
 use server_fn::{Protocol, ServerFn, response::generic::Body};
 use std::{future::Future, pin::Pin, sync::Arc};
 use thiserror::Error;
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use wasi::http::types::{
     IncomingRequest, OutgoingBody, OutgoingResponse, ResponseOutparam,
 };
@@ -82,7 +82,7 @@ type ServerFnHandler = Box<
 ///
 /// [`SsrMode::Static`] is not implemented yet, having one in your `<Router>`
 /// will cause [`Handler::handle_with_context`] to panic!
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 pub struct Handler {
     req: Request<Bytes>,
     res_out: ResponseOutparam,
@@ -96,7 +96,7 @@ pub struct Handler {
     ssr_router: Router<RouteListing>,
 }
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 impl Handler {
     /// Wraps the WASI resources to handle the request.
     /// Could fail if the [`IncomingRequest`] cannot be converted to
@@ -696,7 +696,7 @@ impl RouterPathRepresentation for Vec<PathSegment> {
     }
 }
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 #[derive(Error, Debug)]
 pub enum HandlerError {
     #[error("error handling request")]
@@ -715,7 +715,7 @@ pub enum HandlerError {
     WasiResponseBody(wasi::http::types::ErrorCode),
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 pub struct Handler {
     req: Request<Bytes>,
 
@@ -728,7 +728,7 @@ pub struct Handler {
     ssr_router: Router<RouteListing>,
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 impl Handler {
     pub async fn build(
         req: Request<wasip3::http_compat::IncomingRequestBody>,
@@ -1152,11 +1152,11 @@ impl Handler {
     }
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 #[derive(Clone, Debug)]
 pub struct WasiBuf(pub Vec<u8>);
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 impl bytes::Buf for WasiBuf {
     fn remaining(&self) -> usize {
         self.0.len()
@@ -1171,14 +1171,14 @@ impl bytes::Buf for WasiBuf {
     }
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 impl From<WasiBuf> for Vec<u8> {
     fn from(buf: WasiBuf) -> Self {
         buf.0
     }
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 #[derive(Error, Debug)]
 pub enum HandlerError {
     #[error("error handling request")]

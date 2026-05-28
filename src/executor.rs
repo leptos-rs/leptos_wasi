@@ -20,7 +20,7 @@
 //! [`Mode`] enum to trade-off reactivity for less host context switch
 //! with the [`Mode::Stalled`] variant.
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 mod p2 {
     use any_spawner::CustomExecutor;
     use futures::{
@@ -286,10 +286,10 @@ mod p2 {
     }
 }
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 pub use p2::*;
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 mod p3 {
     use any_spawner::CustomExecutor;
 
@@ -322,5 +322,5 @@ mod p3 {
     }
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 pub use p3::*;

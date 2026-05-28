@@ -1,4 +1,4 @@
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 mod p2 {
     use crate::CHUNK_BYTE_SIZE;
     use bytes::Bytes;
@@ -120,10 +120,10 @@ mod p2 {
     }
 }
 
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+#[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 pub use p2::*;
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 mod p3 {
     use thiserror::Error;
     use wasip3::http::types::Request as WasiRequest;
@@ -137,5 +137,5 @@ mod p3 {
     }
 }
 
-#[cfg(feature = "wasi-p3")]
+#[cfg(feature = "wasip3")]
 pub use p3::*;
