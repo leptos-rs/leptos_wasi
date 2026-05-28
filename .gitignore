@@ -22,6 +22,5 @@ target/
 
 .DS_Store
 
-# Local binaries and tooling
-bin/
+
 

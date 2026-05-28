@@ -1,44 +1,38 @@
 #![forbid(unsafe_code)]
 
+#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
+use crate::CHUNK_BYTE_SIZE;
 use crate::{
     response::{Response, ResponseOptions},
     utils::redirect,
 };
-#[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
-use crate::CHUNK_BYTE_SIZE;
 
 /// Maximum size for request bodies when collecting async streams (16MB)
 /// This prevents memory exhaustion from malicious or very large requests
 const MAX_REQUEST_BODY_SIZE: usize = 16 * 1024 * 1024;
 use bytes::Bytes;
-use futures::{
-    stream::once,
-    StreamExt,
-};
 #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
 use futures::stream;
+use futures::{StreamExt, stream::once};
 use http::{
+    HeaderValue, Request, StatusCode, Uri,
     header::{ACCEPT, LOCATION, REFERER},
     request::Parts,
-    HeaderValue, StatusCode, Uri,
 };
 use hydration_context::SsrSharedContext;
 use leptos::{
-    prelude::{provide_context, Owner, ScopedFuture},
     IntoView,
+    prelude::{Owner, ScopedFuture, provide_context},
 };
 use leptos_integration_utils::{ExtendResponse, PinnedStream};
 use leptos_meta::ServerMetaContext;
 use leptos_router::{
-    components::provide_server_redirect, location::RequestUrl, ExpandOptionals,
-    PathSegment, RouteList, RouteListing, SsrMode,
+    ExpandOptionals, PathSegment, RouteList, RouteListing, SsrMode,
+    components::provide_server_redirect, location::RequestUrl,
 };
 use mime_guess::MimeGuess;
 use routefinder::Router;
-use server_fn::{response::generic::Body, Protocol};
-
-use http::Request;
-use server_fn::ServerFn;
+use server_fn::{Protocol, ServerFn, response::generic::Body};
 use std::{future::Future, pin::Pin, sync::Arc};
 use thiserror::Error;
 #[cfg(all(feature = "wasi-p2", not(feature = "wasi-p3")))]
@@ -147,12 +141,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<ServerBody>,
-            Response = http::Response<ServerBody>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<ServerBody>,
+                Response = http::Response<ServerBody>,
+            >,
         ServerBody: Into<crate::response::Body> + From<Bytes> + 'static,
     {
         if self.shortcut() {
@@ -189,26 +183,39 @@ impl Handler {
                                 match chunk_result {
                                     Ok(chunk) => {
                                         // Check size limit before adding chunk
-                                        if collected_bytes.len() + chunk.len() > MAX_REQUEST_BODY_SIZE {
+                                        if collected_bytes.len() + chunk.len()
+                                            > MAX_REQUEST_BODY_SIZE
+                                        {
                                             let error_msg = format!(
-                                                "Request body too large (max: {} bytes)",
+                                                "Request body too large (max: \
+                                                 {} bytes)",
                                                 MAX_REQUEST_BODY_SIZE
                                             );
-                                            let error_response = http::Response::builder()
-                                                .status(413) // Payload Too Large
-                                                .body(Body::Sync(Bytes::from(error_msg)))
-                                                .unwrap();
+                                            let error_response =
+                                                http::Response::builder()
+                                                    .status(413) // Payload Too Large
+                                                    .body(Body::Sync(
+                                                        Bytes::from(error_msg),
+                                                    ))
+                                                    .unwrap();
                                             return error_response;
                                         }
-                                        collected_bytes.extend_from_slice(&chunk);
+                                        collected_bytes
+                                            .extend_from_slice(&chunk);
                                     }
                                     Err(e) => {
                                         // Handle stream errors by returning an error response
-                                        let error_msg = format!("Failed to read request body: {}", e);
-                                        let error_response = http::Response::builder()
-                                            .status(400)
-                                            .body(Body::Sync(Bytes::from(error_msg)))
-                                            .unwrap();
+                                        let error_msg = format!(
+                                            "Failed to read request body: {}",
+                                            e
+                                        );
+                                        let error_response =
+                                            http::Response::builder()
+                                                .status(400)
+                                                .body(Body::Sync(Bytes::from(
+                                                    error_msg,
+                                                )))
+                                                .unwrap();
                                         return error_response;
                                     }
                                 }
@@ -218,7 +225,8 @@ impl Handler {
                         }
                     };
 
-                    let server_request = Request::from_parts(parts, server_body);
+                    let server_request =
+                        Request::from_parts(parts, server_body);
                     let response = T::run_on_server(server_request).await;
                     // Convert Response<ServerBody> to Response<server_fn::response::generic::Body>
                     response.map(|body| {
@@ -253,12 +261,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<server_fn::response::generic::Body>,
-            Response = http::Response<server_fn::response::generic::Body>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<server_fn::response::generic::Body>,
+                Response = http::Response<server_fn::response::generic::Body>,
+            >,
     {
         self.with_server_fn::<T, server_fn::response::generic::Body>()
     }
@@ -284,12 +292,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<axum_core::body::Body>,
-            Response = http::Response<axum_core::body::Body>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<axum_core::body::Body>,
+                Response = http::Response<axum_core::body::Body>,
+            >,
     {
         self.with_server_fn::<T, axum_core::body::Body>()
     }
@@ -306,9 +314,9 @@ impl Handler {
         mut self,
         prefix: T,
         handler: impl Fn(String) -> Option<crate::response::Body>
-            + 'static
-            + Send
-            + Clone,
+        + 'static
+        + Send
+        + Clone,
     ) -> Self
     where
         T: TryInto<Uri>,
@@ -676,7 +684,9 @@ impl RouterPathRepresentation for Vec<PathSegment> {
                 PathSegment::Unit => {}
                 PathSegment::OptionalParam(_) => {
                     eprintln!(
-                        "to_rf_str_representation should only be called on expanded paths, which do not have OptionalParam any longer"
+                        "to_rf_str_representation should only be called on \
+                         expanded paths, which do not have OptionalParam any \
+                         longer"
                     );
                     Default::default()
                 }
@@ -726,8 +736,12 @@ impl Handler {
         let (parts, body) = req.into_parts();
 
         use http_body_util::BodyExt;
-        let body_bytes = body.collect().await
-            .map_err(|e| HandlerError::Request(crate::request::RequestError::Wasi(e)))?
+        let body_bytes = body
+            .collect()
+            .await
+            .map_err(|e| {
+                HandlerError::Request(crate::request::RequestError::Wasi(e))
+            })?
             .to_bytes();
 
         let http_req = Request::from_parts(parts, body_bytes);
@@ -750,12 +764,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<ServerBody>,
-            Response = http::Response<ServerBody>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<ServerBody>,
+                Response = http::Response<ServerBody>,
+            >,
         ServerBody: Into<crate::response::Body> + From<Bytes> + 'static,
     {
         if self.shortcut() {
@@ -786,25 +800,38 @@ impl Handler {
                             while let Some(chunk_result) = stream.next().await {
                                 match chunk_result {
                                     Ok(chunk) => {
-                                        if collected_bytes.len() + chunk.len() > MAX_REQUEST_BODY_SIZE {
+                                        if collected_bytes.len() + chunk.len()
+                                            > MAX_REQUEST_BODY_SIZE
+                                        {
                                             let error_msg = format!(
-                                                "Request body too large (max: {} bytes)",
+                                                "Request body too large (max: \
+                                                 {} bytes)",
                                                 MAX_REQUEST_BODY_SIZE
                                             );
-                                            let error_response = http::Response::builder()
-                                                .status(413)
-                                                .body(Body::Sync(Bytes::from(error_msg)))
-                                                .unwrap();
+                                            let error_response =
+                                                http::Response::builder()
+                                                    .status(413)
+                                                    .body(Body::Sync(
+                                                        Bytes::from(error_msg),
+                                                    ))
+                                                    .unwrap();
                                             return error_response;
                                         }
-                                        collected_bytes.extend_from_slice(&chunk);
+                                        collected_bytes
+                                            .extend_from_slice(&chunk);
                                     }
                                     Err(e) => {
-                                        let error_msg = format!("Failed to read request body: {}", e);
-                                        let error_response = http::Response::builder()
-                                            .status(400)
-                                            .body(Body::Sync(Bytes::from(error_msg)))
-                                            .unwrap();
+                                        let error_msg = format!(
+                                            "Failed to read request body: {}",
+                                            e
+                                        );
+                                        let error_response =
+                                            http::Response::builder()
+                                                .status(400)
+                                                .body(Body::Sync(Bytes::from(
+                                                    error_msg,
+                                                )))
+                                                .unwrap();
                                         return error_response;
                                     }
                                 }
@@ -814,7 +841,8 @@ impl Handler {
                         }
                     };
 
-                    let server_request = Request::from_parts(parts, server_body);
+                    let server_request =
+                        Request::from_parts(parts, server_body);
                     let response = T::run_on_server(server_request).await;
                     response.map(|body| {
                         let our_body: crate::response::Body = body.into();
@@ -838,12 +866,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<server_fn::response::generic::Body>,
-            Response = http::Response<server_fn::response::generic::Body>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<server_fn::response::generic::Body>,
+                Response = http::Response<server_fn::response::generic::Body>,
+            >,
     {
         self.with_server_fn::<T, server_fn::response::generic::Body>()
     }
@@ -852,12 +880,12 @@ impl Handler {
     where
         T: ServerFn + 'static,
         T::Server: server_fn::server::Server<
-            T::Error,
-            T::InputStreamError,
-            T::OutputStreamError,
-            Request = Request<axum_core::body::Body>,
-            Response = http::Response<axum_core::body::Body>,
-        >,
+                T::Error,
+                T::InputStreamError,
+                T::OutputStreamError,
+                Request = Request<axum_core::body::Body>,
+                Response = http::Response<axum_core::body::Body>,
+            >,
     {
         self.with_server_fn::<T, axum_core::body::Body>()
     }
@@ -866,9 +894,9 @@ impl Handler {
         mut self,
         prefix: T,
         handler: impl Fn(String) -> Option<crate::response::Body>
-            + 'static
-            + Send
-            + Clone,
+        + 'static
+        + Send
+        + Clone,
     ) -> Self
     where
         T: TryInto<Uri>,
@@ -1114,11 +1142,12 @@ impl Handler {
             body.map_frame(|frame| {
                 frame.map_data(|bytes| WasiBuf(bytes.to_vec()))
             })
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            .map_err(|e| std::io::Error::other(e.to_string()))
         });
 
-        let wasi_res = wasip3::http_compat::http_into_wasi_response(mapped_response)
-            .map_err(HandlerError::Wasi)?;
+        let wasi_res =
+            wasip3::http_compat::http_into_wasi_response(mapped_response)
+                .map_err(HandlerError::Wasi)?;
         Ok(wasi_res)
     }
 }

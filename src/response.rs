@@ -107,8 +107,7 @@ impl
                         // Convert Box<dyn Error + Send + Sync> to throw_error::Error
                         // We use std::io::Error as an intermediate since boxed trait objects
                         // don't implement std::error::Error themselves
-                        yield Err(throw_error::Error::from(std::io::Error::new(
-                            std::io::ErrorKind::Other,
+                        yield Err(throw_error::Error::from(std::io::Error::other(
                             format!("Body frame error: {}", e)
                         )));
                     }
@@ -234,25 +233,27 @@ impl http_body::Body for Body {
     fn poll_frame(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+    ) -> std::task::Poll<
+        Option<Result<http_body::Frame<Self::Data>, Self::Error>>,
+    > {
         match &mut *self {
             Body::Sync(bytes) => {
                 if bytes.is_empty() {
                     std::task::Poll::Ready(None)
                 } else {
                     let data = std::mem::take(bytes);
-                    std::task::Poll::Ready(Some(Ok(http_body::Frame::data(data))))
+                    std::task::Poll::Ready(Some(Ok(http_body::Frame::data(
+                        data,
+                    ))))
                 }
             }
-            Body::Async(stream) => {
-                match stream.as_mut().poll_next(cx) {
-                    std::task::Poll::Ready(Some(item)) => {
-                        std::task::Poll::Ready(Some(item.map(http_body::Frame::data)))
-                    }
-                    std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
-                    std::task::Poll::Pending => std::task::Poll::Pending,
-                }
-            }
+            Body::Async(stream) => match stream.as_mut().poll_next(cx) {
+                std::task::Poll::Ready(Some(item)) => std::task::Poll::Ready(
+                    Some(item.map(http_body::Frame::data)),
+                ),
+                std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
+                std::task::Poll::Pending => std::task::Poll::Pending,
+            },
         }
     }
 }

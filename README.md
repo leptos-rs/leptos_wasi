@@ -51,7 +51,7 @@ Contributions are welcome!
 ## Compatibility
 
 - **Leptos:** `0.8.9` fully tested.
-- **Spin SDK:** `v6.0.0` (WASIp3) and `v5.x` (WASIp2) fully tested.
+- **Spin SDK:** `v6.0.0` (WASIp3) fully tested.
 - **WASI Features:**
   - `wasi-p2` (Default): Built-in cooperative async polling executor.
   - `wasi-p3`: Native host-level task spawning utilizing `wasip3::wit_bindgen::spawn`.
@@ -201,39 +201,7 @@ fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
 }
 ```
 
-## Local Tooling & Binaries (`./bin/` directory)
 
-To ensure 100% test parity and avoid version skew with system-wide CLI tools, the example `Makefile`s are configured to run local executable binaries stored in the `./bin/` directory at the project root:
-- `./bin/spin` (Spin v4.0.0+)
-- `./bin/wasmtime` (Wasmtime v43.0.1+)
-
-These binaries are ignored by git (via `.gitignore`).
-
-### Setting Up Local Binaries
-
-To run the local testing environment, populate the `./bin` directory with the matching binaries for your host architecture:
-
-#### macOS (Apple Silicon - arm64):
-```bash
-mkdir -p bin
-
-# Download & extract Spin v4.0.0
-curl -L https://github.com/fermyon/spin/releases/download/v4.0.0/spin-v4.0.0-macos-aarch64.tar.gz | tar -xz -C bin spin
-
-# Download & extract Wasmtime v43.0.1
-curl -L https://github.com/bytecodealliance/wasmtime/releases/download/v43.0.1/wasmtime-v43.0.1-aarch64-macos.tar.xz | tar -xJ -C bin --strip-components=1 wasmtime-v43.0.1-aarch64-macos/wasmtime
-```
-
-#### Linux (x86_64):
-```bash
-mkdir -p bin
-
-# Download & extract Spin v4.0.0
-curl -L https://github.com/fermyon/spin/releases/download/v4.0.0/spin-v4.0.0-linux-amd64.tar.gz | tar -xz -C bin spin
-
-# Download & extract Wasmtime v43.0.1
-curl -L https://github.com/bytecodealliance/wasmtime/releases/download/v43.0.1/wasmtime-v43.0.1-x86_64-linux.tar.xz | tar -xJ -C bin --strip-components=1 wasmtime-v43.0.1-x86_64-linux/wasmtime
-```
 
 ## Core Features
 

@@ -9,13 +9,14 @@ description = ""
 [[trigger.http]]
 route = "/..."
 component = "spin-counter"
+executor = { type = "http" }
 
 [component.spin-counter]
-source = "target/wasm32-wasip1/release/spin_counter.wasm"
+source = "target/wasm32-wasip2/release/spin_counter.wasm"
 allowed_outbound_hosts = []
 key_value_stores = ["default"]
 [component.spin-counter.build]
-command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=spin_counter cargo build --lib --target wasm32-wasip1 --release --no-default-features --features ssr"
+command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=spin_counter cargo build --lib --target wasm32-wasip2 --release --no-default-features --features ssr"
 watch = ["src/**/*.rs", "Cargo.toml"]
 
 [[trigger.http]]

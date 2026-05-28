@@ -2,7 +2,6 @@ use components::{Route, Router, Routes};
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::*;
-
 #[cfg(feature = "hydrate")]
 use web_sys::window;
 
@@ -61,7 +60,10 @@ fn HomePage() -> impl IntoView {
     let (optimistic_count, set_optimistic_count) = signal(None::<u32>);
 
     // Server count resource
-    let count = Resource::new(move || increment_action.version().get(), |_| get_count());
+    let count = Resource::new(
+        move || increment_action.version().get(),
+        |_| get_count(),
+    );
 
     // Initialize from localStorage or server
     Effect::new(move |_| {
@@ -71,8 +73,12 @@ fn HomePage() -> impl IntoView {
             {
                 if let Some(window) = window() {
                     if let Ok(Some(storage)) = window.local_storage() {
-                        if let Ok(Some(cached_count_str)) = storage.get_item("spin_counter_count") {
-                            if let Ok(cached_count) = cached_count_str.parse::<u32>() {
+                        if let Ok(Some(cached_count_str)) =
+                            storage.get_item("spin_counter_count")
+                        {
+                            if let Ok(cached_count) =
+                                cached_count_str.parse::<u32>()
+                            {
                                 set_optimistic_count.set(Some(cached_count));
                                 return;
                             }
@@ -90,7 +96,10 @@ fn HomePage() -> impl IntoView {
                 {
                     if let Some(window) = window() {
                         if let Ok(Some(storage)) = window.local_storage() {
-                            let _ = storage.set_item("spin_counter_count", &server_count.to_string());
+                            let _ = storage.set_item(
+                                "spin_counter_count",
+                                &server_count.to_string(),
+                            );
                         }
                     }
                 }
@@ -113,7 +122,10 @@ fn HomePage() -> impl IntoView {
             {
                 if let Some(window) = window() {
                     if let Ok(Some(storage)) = window.local_storage() {
-                        let _ = storage.set_item("spin_counter_count", &server_count.to_string());
+                        let _ = storage.set_item(
+                            "spin_counter_count",
+                            &server_count.to_string(),
+                        );
                     }
                 }
             }
@@ -131,7 +143,8 @@ fn HomePage() -> impl IntoView {
         {
             if let Some(window) = window() {
                 if let Ok(Some(storage)) = window.local_storage() {
-                    let _ = storage.set_item("spin_counter_count", &new_count.to_string());
+                    let _ = storage
+                        .set_item("spin_counter_count", &new_count.to_string());
                 }
             }
         }
@@ -246,7 +259,9 @@ fn NotFound() -> impl IntoView {
     {
         // this can be done inline because it's synchronous
         // if it were async, we'd use a server function
-        if let Some(resp) = use_context::<leptos_wasi::response::ResponseOptions>() {
+        if let Some(resp) =
+            use_context::<leptos_wasi::response::ResponseOptions>()
+        {
             resp.set_status(leptos_wasi::prelude::StatusCode::NOT_FOUND);
         }
     }
@@ -256,8 +271,10 @@ fn NotFound() -> impl IntoView {
 
 #[server(prefix = "/api")]
 pub async fn get_count() -> Result<u32, ServerFnError<String>> {
-    let store = spin_sdk::key_value::Store::open_default().map_err(|e| e.to_string())?;
-    match store.get_json::<u32>("spin_counter_count") {
+    let store = spin_sdk::key_value::Store::open_default()
+        .await
+        .map_err(|e| e.to_string())?;
+    match store.get_json::<u32>("spin_counter_count").await {
         Ok(Some(count)) => {
             println!("Retrieved count: {count}");
             Ok(count)
@@ -275,10 +292,13 @@ pub async fn get_count() -> Result<u32, ServerFnError<String>> {
 
 #[server(prefix = "/api")]
 pub async fn increment_count() -> Result<(), ServerFnError<String>> {
-    let store = spin_sdk::key_value::Store::open_default().map_err(|e| e.to_string())?;
+    let store = spin_sdk::key_value::Store::open_default()
+        .await
+        .map_err(|e| e.to_string())?;
 
     // Get current count
-    let current_count = match store.get_json::<u32>("spin_counter_count") {
+    let current_count = match store.get_json::<u32>("spin_counter_count").await
+    {
         Ok(Some(count)) => count,
         Ok(None) => 0,
         Err(_) => 0,
@@ -289,6 +309,7 @@ pub async fn increment_count() -> Result<(), ServerFnError<String>> {
 
     store
         .set_json("spin_counter_count", &new_count)
+        .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
     Ok(())

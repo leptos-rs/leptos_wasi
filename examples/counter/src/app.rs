@@ -32,7 +32,7 @@ pub fn App() -> impl IntoView {
     let fallback = || view! { "Page not found." }.into_view();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/counter_p3.css" />
+        <Stylesheet id="leptos" href="/pkg/counter.css" />
         <Meta
             name="description"
             content="A website running its server-side as a WASIp3 Component :D"
@@ -125,7 +125,7 @@ fn HomePage() -> impl IntoView {
                                 <span class="text-[#1a2332] font-bold text-xl">L</span>
                             </div>
                             <h1 class="text-3xl md:text-4xl font-medium text-white">
-                                "Counter-P3"
+                                "Counter"
                             </h1>
                         </div>
                         <p class="text-[#8b9cb8] text-sm">

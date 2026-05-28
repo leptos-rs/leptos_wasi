@@ -26,7 +26,7 @@ fn main() {
         }
     }
 
-    // You can also check for specific environment markers
+    // Check for specific environment markers
     if env::var("SPIN_BUILD").is_ok() {
         println!("cargo:rustc-cfg=runtime_spin");
         println!("cargo:warning=SPIN_BUILD detected, building for Spin");
