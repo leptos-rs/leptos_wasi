@@ -54,6 +54,18 @@ community-driven project and be battle-tested to be deemed *production-ready*.
 
 Contributions are welcome!
 
+## What's New in v0.3.0
+
+- **Native WASI Preview 3 support** via the `wasi-p3` feature flag — task spawning is delegated directly to the host runtime using `wasip3::wit_bindgen::spawn`, eliminating guest-side cooperative polling overhead.
+- **`init_wasip3_spawner()` API** for initializing the WASIp3 executor at your server entrypoint.
+- **Async `Handler::build()`** under WASIp3 (different signature from WASIp2).
+- **Spin SDK v6 / Spin v4** compatibility with native WASIp3 HTTP triggers.
+- **Dual-runtime counter example** (`examples/counter`) supporting both raw Wasmtime and Spin via compile-time `build.rs` runtime detection.
+- **Spin-only counter example** (`examples/spin-counter`) using Spin's built-in key-value store.
+- **Upgraded Leptos ecosystem:** `leptos` 0.8.9, `server_fn` 0.8.7, `leptos_router` 0.8.7, `leptos_meta` 0.8.5, `leptos_macro` 0.8.8.
+- **New dependency:** `wasip3 = "0.6.0"` (WASIp3 core types, host spawner bindings, HTTP compatibility layers).
+- **New dependency:** `http-body = "1.0.0"` (standard streaming response frames for the WASIp3 pipeline).
+
 ## Prerequisites
 
 To compile and run applications utilizing this crate, the following tools are required:
@@ -67,9 +79,9 @@ To compile and run applications utilizing this crate, the following tools are re
 
 - **Leptos:** `0.8.9` fully tested.
 - **Spin SDK:** `v6.0.0` (WASIp3) fully tested.
-- **Crate Dependencies:**
-  - `wasi = "0.13.1"` (stripped semver metadata to eliminate cargo warnings)
-  - `wasip3 = "0.6.0"` (stripped semver metadata to eliminate cargo warnings)
+- **WASI Bindings:**
+  - `wasi = "0.13.1"` — WASIp2 types and polling interfaces.
+  - `wasip3 = "0.6.0"` — WASIp3 core types, host spawner, and HTTP compatibility layers.
 - **WASI Features:**
   - `wasi-p2` (Default): Built-in cooperative async polling executor.
   - `wasi-p3`: Native host-level task spawning utilizing `wasip3::wit_bindgen::spawn`.
