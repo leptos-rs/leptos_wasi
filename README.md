@@ -31,7 +31,7 @@ https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 
 ## Prerequisites
 
-- **Rust:** ≥ 1.93.0 (required by spin-sdk)
+- **Rust:** ≥ 1.93.0 (required by `spin-sdk` v6.0.0)
 - **Target:** `rustup target add wasm32-wasip2`
 - **Cargo Leptos:** `cargo install --locked cargo-leptos`
 - **Wasmtime:** ≥ 45.0.0 *(if serving under Wasmtime)*

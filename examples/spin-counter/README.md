@@ -4,7 +4,7 @@ This example demonstrates running a Leptos application utilizing the native WASI
 
 ## Prerequisites
 
-- **Rust Toolchain:** Version 1.93.0 or later (required by spin-sdk).
+- **Rust Toolchain:** Version 1.93.0 or later (required by `spin-sdk` v6.0.0).
 - **Rust target:** `rustup target add wasm32-wasip2`
 - **Spin CLI:** Version 4.0.0 or later.
 - **Cargo Leptos:** `cargo install --locked cargo-leptos`
