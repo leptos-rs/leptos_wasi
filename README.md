@@ -67,6 +67,9 @@ To compile and run applications utilizing this crate, the following tools are re
 
 - **Leptos:** `0.8.9` fully tested.
 - **Spin SDK:** `v6.0.0` (WASIp3) fully tested.
+- **Crate Dependencies:**
+  - `wasi = "0.13.1"` (stripped semver metadata to eliminate cargo warnings)
+  - `wasip3 = "0.6.0"` (stripped semver metadata to eliminate cargo warnings)
 - **WASI Features:**
   - `wasi-p2` (Default): Built-in cooperative async polling executor.
   - `wasi-p3`: Native host-level task spawning utilizing `wasip3::wit_bindgen::spawn`.
@@ -228,8 +231,8 @@ fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
 ## Examples
 
 Check out the following sample applications in this repository:
-- **[counter](file:///Volumes/goldcoders/leptos_wasi/examples/counter)**: A complete Leptos counter application running under native WASI Preview 3, supporting both raw Wasmtime and Spin as runtimes.
-- **[spin-counter](file:///Volumes/goldcoders/leptos_wasi/examples/spin-counter)**: A Leptos counter application compiled specifically for the Spin SDK using the Spin Key-Value store.
+- **[counter](./examples/counter)**: A complete Leptos counter application running under native WASI Preview 3, supporting both raw Wasmtime and Spin as runtimes.
+- **[spin-counter](./examples/spin-counter)**: A Leptos counter application compiled specifically for the Spin SDK using the Spin Key-Value store.
 
 ## Core Features
 
