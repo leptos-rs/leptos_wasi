@@ -1,4 +1,4 @@
-//! A first-party support of the `wasm32-wasip1` target for the **Server-Side**
+//! A first-party support of the `wasm32-wasip2` and `wasm32-wasip3` targets for the **Server-Side**
 //! of Leptos using the [`wasi:http`][wasi-http] proposal.
 //!
 //! [wasi-http]: https://github.com/WebAssembly/wasi-http
@@ -36,7 +36,7 @@
 //!
 //! # WASI Bindings
 //!
-//! We are using the bindings provided by the `wasi` crate.
+//! We are using the bindings provided by the `wasi` and `wasip3` crates.
 
 pub mod executor;
 pub mod handler;

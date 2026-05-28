@@ -27,11 +27,17 @@ seamlessly with the Leptos Framework.
 
 Running `cargo leptos build` will provide you with a
 [WebAssembly Component][wasm-component] importing the
-[`wasi:http/proxy` world][wasi-http-proxy]. This means you can serve
+[`wasi:http/proxy` world][wasi-http-proxy] (or WASIp3 equivalents). This means you can serve
 your server on any runtime supporting this world, for example:
 
+For WASI Preview 2:
 ```shell
 wasmtime serve target/server/wasm32-wasip2/debug/your_crate.wasm -Scommon
+```
+
+For WASI Preview 3:
+```shell
+wasmtime serve -W component-model-async=y -S p3=y target/server/wasm32-wasip2/debug/your_crate.wasm
 ```
 
 [bc-a]: https://bytecodealliance.org/
@@ -47,6 +53,15 @@ Alliance nor funded by any organisation. Consider this crate should become a
 community-driven project and be battle-tested to be deemed *production-ready*.
 
 Contributions are welcome!
+
+## Prerequisites
+
+To compile and run applications utilizing this crate, the following tools are required:
+- **Rust Toolchain:** Version 1.85.0 or later (required for edition 2024).
+- **Rust Target:** `wasm32-wasip2` (run `rustup target add wasm32-wasip2`).
+- **Cargo Leptos:** `cargo install --locked cargo-leptos`.
+- **Wasmtime CLI:** Version 45.0.0 or later (if serving under Wasmtime).
+- **Spin CLI:** Version 4.0.0 or later (if serving under Spin).
 
 ## Compatibility
 
@@ -82,29 +97,38 @@ Under WASIp3, task spawning is handled natively by the host runtime, so you do n
 ```rust
 use leptos::config::get_configuration;
 use leptos_wasi::executor::init_wasip3_spawner;
-use spin_sdk::http::{Request, Response, IntoResponse};
-use spin_sdk::http_service;
+use leptos_wasi::prelude::Handler;
+use wasip3::http::types::{Request, Response, ErrorCode};
 
 use crate::app::{shell, App, GetCount};
 
-#[http_service]
-async fn handle_request(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
-    // 1. Initialize the host-level task spawner
-    let _ = init_wasip3_spawner();
-    
-    let conf = get_configuration(None).unwrap();
-    let leptos_options = conf.leptos_options;
+struct LeptosServer;
 
-    // 2. Build and handle request natively
-    let wasi_res = Handler::build(req).await?
-        .with_server_fn_axum::<GetCount>()
-        .generate_routes(App)
-        .handle_with_context(move || shell(leptos_options.clone()), || {})
-        .await?;
+impl wasip3::exports::http::handler::Guest for LeptosServer {
+    async fn handle(request: Request) -> Result<Response, ErrorCode> {
+        // 1. Initialize host async task scheduling
+        let _ = init_wasip3_spawner();
 
-    let res = wasip3::http_compat::http_from_wasi_response(wasi_res)?;
-    Ok(res)
+        let conf = get_configuration(None).unwrap();
+        let leptos_options = conf.leptos_options;
+
+        // Convert the WASI request to http::Request
+        let req = wasip3::http_compat::http_from_wasi_request(request)?;
+
+        // 2. Build and handle request natively
+        let wasi_res = Handler::build(req).await
+            .map_err(|_| ErrorCode::InternalError(None))?
+            .with_server_fn_axum::<GetCount>()
+            .generate_routes(App)
+            .handle_with_context(move || shell(leptos_options.clone()), || {})
+            .await
+            .map_err(|_| ErrorCode::InternalError(None))?;
+
+        Ok(wasi_res)
+    }
 }
+
+wasip3::http::service::export!(LeptosServer);
 ```
 
 ### 2. WASI Preview 2 (WASIp2) Mode
@@ -201,7 +225,11 @@ fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
 }
 ```
 
+## Examples
 
+Check out the following sample applications in this repository:
+- **[counter](file:///Volumes/goldcoders/leptos_wasi/examples/counter)**: A complete Leptos counter application running under native WASI Preview 3, supporting both raw Wasmtime and Spin as runtimes.
+- **[spin-counter](file:///Volumes/goldcoders/leptos_wasi/examples/spin-counter)**: A Leptos counter application compiled specifically for the Spin SDK using the Spin Key-Value store.
 
 ## Core Features
 
@@ -234,8 +262,11 @@ Ensure your server function is properly registered:
 # Build for WASI target
 cargo build --target wasm32-wasip2
 
-# Run with wasmtime
+# Run under WASI Preview 2:
 wasmtime serve target/wasm32-wasip2/release/your_crate.wasm -Scommon
+
+# Run under WASI Preview 3:
+wasmtime serve -W component-model-async=y -S p3=y target/wasm32-wasip2/release/your_crate.wasm
 
 # For leptos projects
 cargo leptos build --release
