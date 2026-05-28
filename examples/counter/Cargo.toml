@@ -2,7 +2,7 @@
 name = "counter"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.93.0"
 authors = ["codeitlikemiley <codeitlikemiley@gmail.com>"]
 description = "A Leptos application running as a WASIp3 Component"
 build = "build.rs"
