@@ -63,10 +63,10 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 # For WASI Preview 2 (default):
-leptos_wasi = "0.2.0"
+leptos_wasi = "0.3.0"
 
 # For WASI Preview 3:
-leptos_wasi = { version = "0.2.0", default-features = false, features = ["wasi-p3"] }
+leptos_wasi = { version = "0.3.0", default-features = false, features = ["wasi-p3"] }
 ```
 
 > [!NOTE]
@@ -173,7 +173,7 @@ handler.static_files_handler("/public", serve_static_files)
 
 ## Migration Guide
 
-### Upgrading to v0.2.0+
+### Upgrading to v0.3.0+
 
 If you're using the older syntax with type placeholders, you can easily upgrade:
 
@@ -183,7 +183,7 @@ If you're using the older syntax with type placeholders, you can easily upgrade:
 .with_server_fn::<GetCount>()
 ```
 
-#### After (v0.2.0+)
+#### After (v0.3.0+)
 ```rust
 .with_server_fn::<GetCount,_>() // for custom backend ResponseBody
 .with_server_fn_axum::<UpdateCount>() 

@@ -1,0 +1,63 @@
+No count found, returning 0
+No count found, returning 0
+Incrementing count from 0 to 1
+Retrieved count: 1
+Retrieved count: 1
+Incrementing count from 1 to 2
+Retrieved count: 2
+Retrieved count: 2
+Incrementing count from 2 to 3
+Retrieved count: 3
+Retrieved count: 3
+Incrementing count from 3 to 4
+Retrieved count: 4
+Retrieved count: 4
+Incrementing count from 4 to 5
+Retrieved count: 5
+Retrieved count: 5
+Incrementing count from 5 to 6
+Retrieved count: 6
+Retrieved count: 6
+Incrementing count from 6 to 7
+Retrieved count: 7
+Retrieved count: 7
+Incrementing count from 7 to 8
+Retrieved count: 8
+Retrieved count: 8
+Incrementing count from 8 to 9
+Retrieved count: 9
+Retrieved count: 9
+Incrementing count from 9 to 10
+Retrieved count: 10
+Retrieved count: 10
+Incrementing count from 10 to 11
+Retrieved count: 11
+Retrieved count: 11
+Incrementing count from 11 to 12
+Retrieved count: 12
+Retrieved count: 12
+Incrementing count from 12 to 13
+Retrieved count: 13
+Retrieved count: 13
+Incrementing count from 13 to 14
+Retrieved count: 14
+Retrieved count: 14
+Incrementing count from 14 to 15
+Retrieved count: 15
+Retrieved count: 15
+Incrementing count from 15 to 16
+Retrieved count: 16
+Retrieved count: 16
+Incrementing count from 16 to 17
+Retrieved count: 17
+Retrieved count: 17
+Incrementing count from 17 to 18
+Retrieved count: 18
+Retrieved count: 18
+Incrementing count from 18 to 19
+Retrieved count: 19
+Retrieved count: 19
+Incrementing count from 19 to 20
+Retrieved count: 20
+Retrieved count: 20
+Retrieved count: 20
