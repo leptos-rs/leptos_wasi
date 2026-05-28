@@ -6,7 +6,7 @@ repository = "https://github.com/leptos-rs/leptos_wasi"
 description = "WASI integrations for the Leptos web framework."
 version = "0.3.0"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 
 [dependencies]
 throw_error = { version = "0.3.0" }
