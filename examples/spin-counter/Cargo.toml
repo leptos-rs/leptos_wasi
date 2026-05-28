@@ -1,22 +1,23 @@
 [package]
 name = "spin-counter"
-authors = ["codeitlikemiley <codeitlikemiley@gmail.com>"]
-description = ""
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.93.0"
 
 [lib]
 crate-type = [ "cdylib" ]
 
 [dependencies]
 any_spawner = { version = "0.3.0", features = ["futures-executor"] }
+anyhow = "1"
 console_error_panic_hook = "0.1"
-leptos = { version = "0.8.9"  }
+leptos = { version = "0.8.9" }
 leptos_meta = { version = "0.8.5" }
 leptos_router = { version = "0.8.7" }
-leptos_wasi = { git = "https://github.com/codeitlikemiley/leptos_wasi", optional = true }
-spin-sdk = { version = "5", optional = true }
+leptos_wasi = { path = "../..", default-features = false, features = ["wasip3"], optional = true }
+spin-sdk = { version = "6.0.0", optional = true }
 wasi = { version = "=0.13.1", optional = true }
+wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
 wasm-bindgen = { version = "=0.2.103", optional = true }
 web-sys = { version = "0.3", features = ["Storage", "Window"], optional = true }
 
@@ -32,7 +33,7 @@ ssr = [
   "leptos/spin",
   "dep:spin-sdk",
   "dep:leptos_wasi",
-  "dep:wasi",
+  "dep:wasip3",
 ]
 
 [package.metadata.leptos]

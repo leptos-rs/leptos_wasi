@@ -9,174 +9,211 @@
   </p>
 </div>
 
-## Explainer
+## Overview
 
-WebAssembly is already popular in the browser but organisations like the
-[Bytecode Alliance][bc-a] are committed to providing the industry with new
-standard-driven ways of running software. Specifically, they are maintaining
-the [Wasmtime][wasmtime] runtime, which allows running WebAssembly out of the
-browser (e.g., on a serverless platform).
+[Leptos](https://leptos.dev) gives you tools to build web applications with
+best-in-class performance using WebAssembly in the browser.
 
-Leptos is already leveraging WebAssembly in the browser and gives you tools to
-build web applications with best-in-class performance.
+This crate takes it further — it lets you also run your
+[Leptos Server](https://book.leptos.dev/server/index.html) as a
+[WebAssembly Component][wasm-component] targeting the
+[`wasi:http`](https://github.com/WebAssembly/wasi-http) proposal. Deploy your
+server on any WASI-compatible runtime:
 
-This crate aims to go further and enable you to also leverage WebAssembly for
-your [Leptos Server][leptos-server]. Specifically, it will allow you to
-target the rust `wasm32-wasip2` target for the server-side while integrating
-seamlessly with the Leptos Framework.
+- **[Wasmtime](https://wasmtime.dev)** — the reference runtime from the
+  [Bytecode Alliance](https://bytecodealliance.org/)
+- **[Spin](https://developer.fermyon.com/spin/v3)** — Fermyon's serverless
+  application platform
 
-Running `cargo leptos build` will provide you with a
-[WebAssembly Component][wasm-component] importing the
-[`wasi:http/proxy` world][wasi-http-proxy]. This means you can serve
-your server on any runtime supporting this world, for example:
+### Demo
 
-```shell
-wasmtime serve target/server/wasm32-wasip2/debug/your_crate.wasm -Scommon
-```
+https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 
-[bc-a]: https://bytecodealliance.org/
-[leptos-server]: https://book.leptos.dev/server/index.html
-[wasmtime]: https://wasmtime.dev
-[wasi-http-proxy]: https://github.com/WebAssembly/wasi-http/blob/main/proxy.md
-[wasm-component]: https://component-model.bytecodealliance.org
+## Prerequisites
 
-## Disclaimer
-
-This crate is **EXPERIMENTAL** and the author is not affiliated with the Bytecode
-Alliance nor funded by any organisation. Consider this crate should become a
-community-driven project and be battle-tested to be deemed *production-ready*.
-
-Contributions are welcome!
+- **Rust:** ≥ 1.93.0 (required by `spin-sdk` v6.0.0)
+- **Target:** `rustup target add wasm32-wasip2`
+- **Cargo Leptos:** `cargo install --locked cargo-leptos`
+- **Wasmtime:** ≥ 45.0.0 *(if serving under Wasmtime)*
+- **Spin:** ≥ 4.0.0 *(if serving under Spin)*
 
 ## Compatibility
 
-- leptos `0.8.9` fully tested
-- spin_sdk `5` fully test
+| Dependency | Version | Notes |
+|------------|---------|-------|
+| Leptos | `0.8.9` | Fully tested |
+| Spin SDK | `6.0.0` | WASIp3 native HTTP triggers |
+| `wasi` | `0.13.1` | WASIp2 types and polling interfaces |
+| `wasip3` | `0.6.0` | WASIp3 core types, host spawner, HTTP compatibility |
+| `http-body` | `1.0.0` | Standard streaming response frames |
 
-## Usage
+## Feature Flags
 
-### Quick Start
+```toml
+[dependencies]
+# WASI Preview 2 (default) — cooperative polling executor:
+leptos_wasi = "0.3.0"
+
+# WASI Preview 3 — native host-level task spawning:
+leptos_wasi = { version = "0.3.0", default-features = false, features = ["wasip3"] }
+```
+
+> [!NOTE]
+> Both features can be enabled simultaneously (`--all-features`). When both
+> `wasip2` and `wasip3` are active, the `wasip3` pipeline takes precedence.
+
+## Quick Start
+
+### WASIp3 with Wasmtime
 
 ```rust
-use leptos_wasi::prelude::*;
+use leptos::config::get_configuration;
+use leptos_wasi::executor::init_wasip3_spawner;
+use leptos_wasi::prelude::Handler;
+use wasip3::http::types::{Request, Response, ErrorCode};
 
-// Server function example
-#[server(UpdateCount, "/api")]
-pub async fn update_count() -> Result<i32, ServerFnError> {
-    // Your server logic here
-    Ok(42)
+use crate::app::{shell, App, GetCount, IncrementCount};
+
+struct LeptosServer;
+
+impl wasip3::exports::http::handler::Guest for LeptosServer {
+    async fn handle(request: Request) -> Result<Response, ErrorCode> {
+        let _ = init_wasip3_spawner();
+
+        let conf = get_configuration(None).unwrap();
+        let leptos_options = conf.leptos_options;
+
+        let req = wasip3::http_compat::http_from_wasi_request(request)?;
+
+        let wasi_res = Handler::build(req).await
+            .map_err(|e| {
+                eprintln!("Error building handler: {:?}", e);
+                ErrorCode::InternalError(None)
+            })?
+            .with_server_fn_axum::<GetCount>()
+            .with_server_fn_axum::<IncrementCount>()
+            .generate_routes(App)
+            .handle_with_context(move || shell(leptos_options.clone()), || {})
+            .await
+            .map_err(|e| {
+                eprintln!("Error handling request: {:?}", e);
+                ErrorCode::InternalError(None)
+            })?;
+
+        Ok(wasi_res)
+    }
 }
 
-// Handler setup
-Handler::build(request, response_out)?
-    .static_files_handler("/public", serve_static_files)
-    .with_server_fn_axum::<UpdateCount>()  // Clean syntax!
-    .generate_routes(App)
-    .handle_with_context(app_fn, additional_context)
-    .await?;
+wasip3::http::service::export!(LeptosServer);
 ```
 
-### Server Function Registration
+```bash
+cargo leptos build --release
+wasmtime serve \
+    -W component-model-async=y \
+    -S p3=y -S cli=y -S http=y \
+    target/server/wasm32-wasip2/release/your_crate.wasm
+```
 
-This crate provides multiple convenient ways to register server functions:
+### WASIp3 with Spin
 
-#### 🎯 **Recommended: Axum Backend (Most Common)**
 ```rust
+use leptos_wasi::executor::init_wasip3_spawner;
+use leptos_wasi::prelude::Handler;
+use spin_sdk::{http::{IntoResponse, Request, Response}, http_service};
+
+#[http_service]
+async fn handle_request(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
+    let _ = init_wasip3_spawner();
+    // ... build Handler and serve
+}
+```
+
+```bash
+spin build --up
+```
+
+### WASIp2 (Cooperative Polling)
+
+```rust
+use any_spawner::Executor as LeptosExecutor;
+use leptos_wasi::prelude::{IncomingRequest, ResponseOutparam, WasiExecutor};
+use wasi::exports::http::incoming_handler::Guest;
+
+struct LeptosServer;
+
+impl Guest for LeptosServer {
+    fn handle(request: IncomingRequest, response_out: ResponseOutparam) {
+        let executor = WasiExecutor::new(leptos_wasi::executor::Mode::Stalled);
+        LeptosExecutor::init_local_custom_executor(executor.clone()).unwrap();
+
+        executor.run_until(async {
+            Handler::build(request, response_out).unwrap()
+                .with_server_fn_axum::<GetCount>()
+                .generate_routes(App)
+                .handle_with_context(move || shell(leptos_options.clone()), || {})
+                .await
+                .unwrap();
+        })
+    }
+}
+
+wasi::http::proxy::export!(LeptosServer with_types_in wasi);
+```
+
+```bash
+cargo leptos build --release
+wasmtime serve target/server/wasm32-wasip2/release/your_crate.wasm -Scommon
+```
+
+## Server Function Registration
+
+```rust
+// Recommended — axum backend (most common):
 .with_server_fn_axum::<MyServerFn>()
-```
-Perfect for most Leptos projects using the default axum backend.
 
-#### 🔧 **Generic Backend**
-```rust
+// Generic backend:
 .with_server_fn_generic::<MyServerFn>()
-```
-For projects using custom server backends.
 
-#### 🛠️ **Advanced: Explicit Control**
-```rust
+// Explicit body type control:
 .with_server_fn::<MyServerFn, BodyType>()
 ```
-When you need full control over body types.
 
-### Static File Serving
+## Static File Serving
 
 ```rust
 fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
-    // Your static file serving logic
     // Return None for 404, Some(body) for file content
 }
 
-handler.static_files_handler("/public", serve_static_files)
+handler.static_files_handler("/pkg", serve_static_files)
 ```
 
-## Migration Guide
+## Examples
 
-### Upgrading to v0.2.0+
-
-If you're using the older syntax with type placeholders, you can easily upgrade:
-
-#### Before (v0.1.3 and earlier)
-
-```rust
-.with_server_fn::<GetCount>()
-```
-
-#### After (v0.2.0+)
-```rust
-.with_server_fn::<GetCount,_>() // for custom backend ResponseBody
-.with_server_fn_axum::<UpdateCount>() 
-.with_server_fn_generic::<GetCount>()
-```
-
-### Static File Handler Updates
-
-The static file handler now expects `leptos_wasi::response::Body` directly:
-
-```rust
-// Updated signature
-fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
-    // Implementation remains the same
-}
-```
+| Example | Runtime | Description |
+|---------|---------|-------------|
+| [counter](./examples/counter) | Wasmtime + Spin | Dual-runtime counter with compile-time storage backend switching (`build.rs`) |
+| [spin-counter](./examples/spin-counter) | Spin only | Counter using Spin's built-in key-value store |
 
 ## Core Features
 
-* :octopus: **Async Runtime**: This crate comes with a single-threaded *async* executor
-  making full use of WASIp2 [`pollable`][wasip2-pollable], so your server is not
-  blocking on I/O and can benefit from Leptos' streaming [SSR Modes][leptos-ssr-modes].
-* :zap: **Short-circuiting Mechanism**: Your component is smart enough to avoid
-  preparing or doing any *rendering* work if the request routes to static files or
-  *Server Functions*.
-* :truck: **Custom Static Assets Serving**: You can write your own logic
-  for serving static assets. For example, once
-  [`wasi:blobstore`][wasi-blobstore] matures up, you could host your static assets
-  on your favorite *Object Storage* provider and make your server fetch them
-  seamlessly.
-* :gear: **Multiple Server Backends**: Works seamlessly with axum, generic, and custom server function backends.
+* :rocket: **Dual Async Runtimes**:
+  - **WASIp2**: Single-threaded cooperative polling executor using [`pollable`][wasip2-pollable] for non-blocking I/O and Leptos streaming [SSR Modes][leptos-ssr-modes].
+  - **WASIp3**: Native host-level task spawning via `wasip3::wit_bindgen::spawn` — zero guest-side event loop overhead.
+* :zap: **Short-circuiting**: Avoids rendering work entirely when serving static files or server functions.
+* :truck: **Custom Static Asset Serving**: Plug your own serving logic (e.g., [`wasi:blobstore`][wasi-blobstore] for object storage).
+* :gear: **Multiple Server Backends**: Axum, generic, and custom server function backends.
 
 ## Troubleshooting
 
-### Common Issues
-
-#### Server function not found (404)
-Ensure your server function is properly registered:
+**Server function not found (404):**
+Ensure every `#[server]` function is registered on the handler:
 ```rust
-.with_server_fn_axum::<YourServerFn>()  // Must match your #[server] macro
-```
-
-### Build Commands
-
-```bash
-# Build for WASI target
-cargo build --target wasm32-wasip2
-
-# Run with wasmtime
-wasmtime serve target/wasm32-wasip2/release/your_crate.wasm -Scommon
-
-# For leptos projects
-cargo leptos build --release
+.with_server_fn_axum::<YourServerFn>()
 ```
 
 [leptos-ssr-modes]: https://book.leptos.dev/ssr/23_ssr_modes.html
 [wasip2-pollable]: https://github.com/WebAssembly/wasi-io/blob/main/wit/poll.wit
 [wasi-blobstore]: https://github.com/WebAssembly/wasi-blobstore
+[wasm-component]: https://component-model.bytecodealliance.org
