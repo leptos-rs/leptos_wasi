@@ -658,17 +658,19 @@ fn start_spin_server(manifest_path: &str) -> anyhow::Result<SpinServer> {
         }
         println!("spin output: {}", trimmed);
         // Look for "Serving http://127.0.0.1:PORT"
-        if trimmed.contains("Serving http") {
-            if let Some(addr) = trimmed.split("http://").nth(1) {
-                if let Some(port_str) =
-                    addr.trim().trim_end_matches('/').rsplit(':').next()
-                {
-                    if let Ok(p) = port_str.parse::<u16>() {
-                        port = Some(p);
-                        break;
-                    }
-                }
-            }
+        let p = trimmed
+            .contains("Serving http")
+            .then(|| {
+                trimmed
+                    .split("http://")
+                    .nth(1)
+                    .and_then(|addr| addr.trim().trim_end_matches('/').rsplit(':').next())
+                    .and_then(|port_str| port_str.parse::<u16>().ok())
+            })
+            .flatten();
+        if let Some(p) = p {
+            port = Some(p);
+            break;
         }
         if let Ok(Some(status)) = child.try_wait() {
             return Err(anyhow::anyhow!(
