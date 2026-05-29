@@ -664,7 +664,9 @@ fn start_spin_server(manifest_path: &str) -> anyhow::Result<SpinServer> {
                 trimmed
                     .split("http://")
                     .nth(1)
-                    .and_then(|addr| addr.trim().trim_end_matches('/').rsplit(':').next())
+                    .and_then(|addr| {
+                        addr.trim().trim_end_matches('/').rsplit(':').next()
+                    })
                     .and_then(|port_str| port_str.parse::<u16>().ok())
             })
             .flatten();
