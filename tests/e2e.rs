@@ -550,11 +550,13 @@ async fn run_e2e_tests(wasm_path: &str, is_p3: bool) {
 }
 
 #[tokio::test]
+#[ignore] // Run via ./run_tests.sh (requires wasmtime + pre-built WASM guests)
 async fn test_e2e_wasip2() {
     run_e2e_tests("tests/test-app-p2.wasm", false).await;
 }
 
 #[tokio::test]
+#[ignore] // Run via ./run_tests.sh (requires wasmtime + pre-built WASM guests)
 async fn test_e2e_wasip3() {
     run_e2e_tests("tests/test-app-p3.wasm", true).await;
 }

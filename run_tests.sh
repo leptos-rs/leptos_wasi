@@ -17,4 +17,4 @@ echo "=== Copying WASIp3 build ==="
 cp tests/test-app/target/wasm32-wasip2/release/test_app.wasm tests/test-app-p3.wasm
 
 echo "=== Running E2E tests ==="
-cargo test --test e2e -- --nocapture
+cargo test --test e2e -- --ignored --nocapture
