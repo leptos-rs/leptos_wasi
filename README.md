@@ -176,7 +176,7 @@ wasmtime serve target/server/wasm32-wasip2/release/your_crate.wasm -Scommon
 .with_server_fn_generic::<MyServerFn>()
 
 // Explicit body type control:
-.with_server_fn::<MyServerFn, BodyType>()
+.with_server_fn::<MyServerFn>()
 ```
 
 ## Static File Serving
