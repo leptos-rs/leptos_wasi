@@ -12,13 +12,13 @@ rust-version = "1.93.0"
 throw_error = { version = "0.3.0" }
 hydration_context = { version = "0.3.0" }
 futures = "0.3.30"
-wasi = { version = "0.13.1", optional = true }
+wasi = { version = "0.14.7", optional = true }
 wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
-leptos = { version = "0.8.9",  features = ["nonce", "ssr"] }
-leptos_meta = { version = "0.8.5",  features = ["ssr"] }
-leptos_router = { version = "0.8.7",  features = ["ssr"] }
-leptos_macro = { version = "0.8.8",  features = ["generic"] }
-leptos_integration_utils = { version = "0.8.5" }
+leptos = { version = "0.8.9", default-features = false, features = ["nonce", "ssr"] }
+leptos_meta = { version = "0.8.5", default-features = false, features = ["ssr"] }
+leptos_router = { version = "0.8.7", default-features = false, features = ["ssr"] }
+leptos_macro = { version = "0.8.8", default-features = false, features = ["generic"] }
+leptos_integration_utils = { version = "0.8.5", default-features = false }
 server_fn = { version = "0.8.7",  features = ["generic","axum-no-default"] , default-features = false}
 any_spawner = { version = "0.3.0", features = ["futures-executor"] }
 http = "1.1.0"

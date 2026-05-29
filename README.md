@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 |------------|---------|-------|
 | Leptos | `0.8.9` | Fully tested |
 | Spin SDK | `6.0.0` | WASIp3 native HTTP triggers |
-| `wasi` | `0.13.1` | WASIp2 types and polling interfaces |
+| `wasi` | `0.14.7` | WASIp2 types and polling interfaces |
 | `wasip3` | `0.6.0` | WASIp3 core types, host spawner, HTTP compatibility |
 | `http-body` | `1.0.0` | Standard streaming response frames |
 
