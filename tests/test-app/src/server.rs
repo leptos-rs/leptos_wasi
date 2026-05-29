@@ -76,9 +76,8 @@ impl HandlerExtCustom for Handler {
 fn serve_static_files(path: String) -> Option<leptos_wasi::response::Body> {
     use std::fs;
     let path = path.strip_prefix("/").unwrap_or(&path);
-    if path.contains("..") || path.contains('\\') {
-        return None;
-    }
+    // Path traversal protection (..  and \) is handled by the library's
+    // static_files_handler — no need to check here.
     // Files are served from /static in the virtual FS
     let file_path = format!("/static/{}", path);
     if let Ok(bytes) = fs::read(&file_path) {

@@ -32,7 +32,7 @@ thiserror = "2"
 async-stream = "0.3.6"
 axum-core = "0.5.2"
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio = { version = "1.38", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "stream"] }
 anyhow = "1.0"

@@ -12,6 +12,9 @@ use wasi::http::types::{HeaderError, Headers};
 
 /// Represents a platform-agnostic HTTP response wrapped with a WASI-compatible [`Body`].
 ///
+/// It supports both [`Body::Sync`] (sending the whole response at once) and
+/// [`Body::Async`] (streaming the response).
+///
 /// # Example
 ///
 /// ```rust

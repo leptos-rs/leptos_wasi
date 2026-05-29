@@ -416,6 +416,13 @@ impl Handler {
             let trimmed_url = stripped_url.trim_start_matches('/');
             let decoded_url = url_decode(trimmed_url);
 
+            // Security: reject path traversal attempts before
+            // invoking the user-provided file handler.
+            if decoded_url.contains("..") || decoded_url.contains('\\') {
+                self.should_404 = true;
+                return self;
+            }
+
             match handler(decoded_url.clone()) {
                 None => self.should_404 = true,
                 Some(body) => {
@@ -1177,6 +1184,13 @@ impl Handler {
             let stripped_url = req_path.strip_prefix(prefix_path).unwrap_or("");
             let trimmed_url = stripped_url.trim_start_matches('/');
             let decoded_url = url_decode(trimmed_url);
+
+            // Security: reject path traversal attempts before
+            // invoking the user-provided file handler.
+            if decoded_url.contains("..") || decoded_url.contains('\\') {
+                self.should_404 = true;
+                return self;
+            }
 
             match handler(decoded_url.clone()) {
                 None => self.should_404 = true,
