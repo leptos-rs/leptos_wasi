@@ -24,8 +24,8 @@ async fn handle_request_inner(
 
     let wasi_res = Handler::build(request)
         .await?
-        .with_server_fn::<GetCount, _>()
-        .with_server_fn::<IncrementCount, _>()
+        .with_server_fn::<GetCount>()
+        .with_server_fn::<IncrementCount>()
         .generate_routes(App)
         .handle_with_context(move || shell(leptos_options.clone()), || {})
         .await?;
