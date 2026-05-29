@@ -122,7 +122,10 @@ fn start_server(
     })
 }
 
-async fn run_assertions(port: u16) -> anyhow::Result<()> {
+async fn run_assertions(
+    port: u16,
+    test_static_files: bool,
+) -> anyhow::Result<()> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none()) // Don't auto-follow redirects so we can test 302 locations
         .build()?;
@@ -203,8 +206,22 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
             .header("Content-Type", "application/json")
             .body("{}")
             .send()
-            .await?;
-        assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+            .await;
+        if test_static_files {
+            // Wasmtime returns 500 Internal Server Error
+            let res = res?;
+            assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        } else {
+            // Spin may drop the connection or return a non-200 status
+            match res {
+                Ok(res) => assert_ne!(
+                    res.status(),
+                    StatusCode::OK,
+                    "Panic endpoint should not return 200 OK"
+                ),
+                Err(_) => { /* connection dropped — acceptable for Spin */ }
+            }
+        }
     }
 
     // 6. POST /api/form_submit_test (with Referer)
@@ -336,8 +353,8 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
         );
     }
 
-    // Adversarial Test 4: URL Decoded Path Serving
-    {
+    // Adversarial Test 4: URL Decoded Path Serving (static files only)
+    if test_static_files {
         let res = client
             .get(format!("{}/static/my%20file.css", base_url))
             .send()
@@ -348,7 +365,7 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
     }
 
     // 8. Static Files Content-Types, 404, zero-byte file, path traversal
-    {
+    if test_static_files {
         // js
         let res = client
             .get(format!("{}/static/app.js", base_url))
@@ -471,15 +488,18 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
             .send()
             .await?;
         assert_eq!(res.status(), StatusCode::OK);
-        let is_chunked = res
-            .headers()
-            .get("Transfer-Encoding")
-            .map(|v| v.to_str().unwrap().contains("chunked"))
-            .unwrap_or(false);
-        assert!(
-            is_chunked,
-            "OutOfOrder SSR mode must use chunked transfer encoding"
-        );
+        if test_static_files {
+            // Only assert chunked encoding for Wasmtime; Spin may buffer responses
+            let is_chunked = res
+                .headers()
+                .get("Transfer-Encoding")
+                .map(|v| v.to_str().unwrap().contains("chunked"))
+                .unwrap_or(false);
+            assert!(
+                is_chunked,
+                "OutOfOrder SSR mode must use chunked transfer encoding"
+            );
+        }
         let text = res.text().await?;
         assert!(text.contains("OutOfOrder View"));
         assert!(text.contains("OutOfOrder resource resolved"));
@@ -494,12 +514,26 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
         ));
 
         // SSR Panic
-        let res = client.get(format!("{}/ssr/panic", base_url)).send().await?;
-        assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let res = client.get(format!("{}/ssr/panic", base_url)).send().await;
+        if test_static_files {
+            // Wasmtime returns 500 Internal Server Error
+            let res = res?;
+            assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        } else {
+            // Spin may drop the connection or return a non-200 status
+            match res {
+                Ok(res) => assert_ne!(
+                    res.status(),
+                    StatusCode::OK,
+                    "SSR panic endpoint should not return 200 OK"
+                ),
+                Err(_) => { /* connection dropped — acceptable for Spin */ }
+            }
+        }
     }
 
-    // 10. Request Body size limit check
-    {
+    // 10. Request Body size limit check (Wasmtime only — Spin has its own limits)
+    if test_static_files {
         // 15MB: should get HTTP 200 OK
         println!("Testing 15MB payload upload...");
         let payload_15mb = vec![b'a'; 15 * 1024 * 1024];
@@ -544,7 +578,7 @@ async fn run_assertions(port: u16) -> anyhow::Result<()> {
 async fn run_e2e_tests(wasm_path: &str, is_p3: bool) {
     let server = start_server(wasm_path, is_p3)
         .expect("Failed to start Wasmtime server");
-    run_assertions(server.port)
+    run_assertions(server.port, true) // true = test static files (Wasmtime serves them)
         .await
         .expect("Assertions failed");
 }
@@ -559,4 +593,127 @@ async fn test_e2e_wasip2() {
 #[ignore] // Run via ./run_tests.sh (requires wasmtime + pre-built WASM guests)
 async fn test_e2e_wasip3() {
     run_e2e_tests("tests/test-app-p3.wasm", true).await;
+}
+
+// ---------------------------------------------------------------------------
+// Spin server support
+// ---------------------------------------------------------------------------
+
+struct SpinServer {
+    child: Child,
+    port: u16,
+    stdout_log: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+}
+
+impl Drop for SpinServer {
+    fn drop(&mut self) {
+        println!("Stopping Spin server on port {}", self.port);
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+
+        if std::thread::panicking()
+            && let Ok(log) = self.stdout_log.lock()
+        {
+            eprintln!(
+                "\n--- Spin Server Log on port {} (test failed) ---",
+                self.port
+            );
+            for line in log.iter() {
+                eprintln!("{}", line);
+            }
+            eprintln!("--------------------------------------------------");
+        }
+    }
+}
+
+fn start_spin_server(manifest_path: &str) -> anyhow::Result<SpinServer> {
+    let args = vec!["up", "-f", manifest_path, "--listen", "127.0.0.1:0"];
+    println!("Spawning spin {:?}", args);
+    let mut child = Command::new("spin")
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("failed to take stdout"))?;
+    let mut reader = BufReader::new(stdout);
+
+    let mut port = None;
+    let mut line = String::new();
+    let stdout_log = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let stdout_log_clone = stdout_log.clone();
+
+    // Parse "Serving http://127.0.0.1:PORT" from stdout
+    for _ in 0..100 {
+        line.clear();
+        if reader.read_line(&mut line)? == 0 {
+            break;
+        }
+        let trimmed = line.trim().to_string();
+        if let Ok(mut log) = stdout_log_clone.lock() {
+            log.push(trimmed.clone());
+        }
+        println!("spin output: {}", trimmed);
+        // Look for "Serving http://127.0.0.1:PORT"
+        if trimmed.contains("Serving http") {
+            if let Some(addr) = trimmed.split("http://").nth(1) {
+                if let Some(port_str) =
+                    addr.trim().trim_end_matches('/').rsplit(':').next()
+                {
+                    if let Ok(p) = port_str.parse::<u16>() {
+                        port = Some(p);
+                        break;
+                    }
+                }
+            }
+        }
+        if let Ok(Some(status)) = child.try_wait() {
+            return Err(anyhow::anyhow!(
+                "spin up exited early with status: {}",
+                status
+            ));
+        }
+    }
+
+    let port = port.ok_or_else(|| {
+        anyhow::anyhow!("Failed to parse port from spin up output")
+    })?;
+
+    // Drain stdout in background
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        while let Ok(n) = reader.read_line(&mut line) {
+            if n == 0 {
+                break;
+            }
+            let trimmed = line.trim().to_string();
+            if let Ok(mut log) = stdout_log_clone.lock() {
+                log.push(trimmed);
+            }
+            line.clear();
+        }
+    });
+
+    Ok(SpinServer {
+        child,
+        port,
+        stdout_log,
+    })
+}
+
+async fn run_spin_e2e_tests(manifest_path: &str) {
+    let server =
+        start_spin_server(manifest_path).expect("Failed to start Spin server");
+    run_assertions(server.port, false) // false = skip static file / body limit tests
+        .await
+        .expect("Assertions failed");
+}
+
+#[tokio::test]
+#[ignore] // Run via ./run_tests.sh (requires spin + pre-built WASM guests)
+async fn test_e2e_spin() {
+    run_spin_e2e_tests("tests/spin.toml").await;
 }

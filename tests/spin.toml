@@ -1,0 +1,13 @@
+spin_manifest_version = 2
+
+[application]
+name = "test-app"
+version = "0.1.0"
+
+[[trigger.http]]
+route = "/..."
+component = "test-app"
+
+[component.test-app]
+source = "test-app-p2.wasm"
+files = [{ source = "test-app/static", destination = "/static" }]

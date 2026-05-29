@@ -48,5 +48,8 @@ jobs:
       - name: Install wasmtime-cli
         run: cargo binstall wasmtime-cli@45.0.0 --no-confirm
 
+      - name: Install spin
+        run: curl -fsSL https://spinframework.dev/downloads/install.sh | bash -s -- -v v4.0.0 && sudo mv spin /usr/local/bin/
+
       - name: Build guest test apps and run E2E tests
         run: ./run_tests.sh

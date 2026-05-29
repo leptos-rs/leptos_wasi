@@ -16,5 +16,8 @@ LEPTOS_OUTPUT_NAME=test-app cargo build --manifest-path tests/test-app/Cargo.tom
 echo "=== Copying WASIp3 build ==="
 cp tests/test-app/target/wasm32-wasip2/release/test_app.wasm tests/test-app-p3.wasm
 
-echo "=== Running E2E tests ==="
-cargo test --test e2e -- --ignored --nocapture
+echo "=== Running Wasmtime E2E tests ==="
+cargo test --test e2e test_e2e_wasip -- --ignored --nocapture
+
+echo "=== Running Spin E2E tests ==="
+cargo test --test e2e test_e2e_spin -- --ignored --nocapture
