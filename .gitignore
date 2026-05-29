@@ -22,5 +22,8 @@ target/
 
 .DS_Store
 
+# E2E test build artifacts (rebuilt by run_tests.sh)
+tests/*.wasm
 
-
+# Rustc ICE crash dumps
+rustc-ice-*.txt
