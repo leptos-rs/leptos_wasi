@@ -63,4 +63,4 @@ pub mod prelude {
 /// When working with streams, this crate will try to chunk bytes with
 /// this size.
 #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
-const CHUNK_BYTE_SIZE: usize = 64;
+const CHUNK_BYTE_SIZE: usize = 8192;

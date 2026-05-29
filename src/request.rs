@@ -9,6 +9,7 @@ mod p2 {
         io::streams::StreamError,
     };
 
+    /// A wrapper around WASI Preview 2 `IncomingRequest` to facilitate conversion to `http::Request`.
     pub struct Request(pub IncomingRequest);
 
     impl TryFrom<Request> for http::Request<Bytes> {
@@ -46,6 +47,13 @@ mod p2 {
                         );
                     }
                     Ok(data) => {
+                        if body_bytes.len() + data.len()
+                            > crate::handler::MAX_REQUEST_BODY_SIZE
+                        {
+                            return Err(RequestError::BodyTooLarge(
+                                crate::handler::MAX_REQUEST_BODY_SIZE,
+                            ));
+                        }
                         body_bytes.extend(data);
                     }
                 }
@@ -80,6 +88,7 @@ mod p2 {
         }
     }
 
+    /// Errors that can occur when converting a WASI Preview 2 request to an `http::Request`.
     #[derive(Error, Debug)]
     #[non_exhaustive]
     pub enum RequestError {
@@ -88,8 +97,12 @@ mod p2 {
 
         #[error("error while processing wasi:http body stream")]
         WasiIo(#[from] wasi::io::streams::StreamError),
+
+        #[error("request body exceeds limit of {0} bytes")]
+        BodyTooLarge(usize),
     }
 
+    /// Converts a WASI Preview 2 HTTP method enum to a standard `http::Method`.
     pub fn method_wasi_to_http(
         value: Method,
     ) -> Result<http::Method, http::Error> {
@@ -108,6 +121,7 @@ mod p2 {
         }
     }
 
+    /// Converts a WASI Preview 2 URI scheme enum to a standard `http::uri::Scheme`.
     pub fn scheme_wasi_to_http(
         value: Scheme,
     ) -> Result<http::uri::Scheme, http::Error> {
@@ -128,8 +142,10 @@ mod p3 {
     use thiserror::Error;
     use wasip3::http::types::Request as WasiRequest;
 
+    /// A wrapper around WASI Preview 3 `Request` to facilitate conversion to `http::Request`.
     pub struct Request(pub WasiRequest);
 
+    /// Errors that can occur when converting a WASI Preview 3 request.
     #[derive(Error, Debug)]
     pub enum RequestError {
         #[error("wasi request conversion error: {0:?}")]

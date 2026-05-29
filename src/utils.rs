@@ -3,17 +3,40 @@ use http::{HeaderName, HeaderValue, StatusCode, header, request::Parts};
 use leptos::prelude::use_context;
 use server_fn::redirect::REDIRECT_HEADER;
 
-/// Allow to return an HTTP redirection from components.
+/// Allows returning an HTTP redirection from components.
+///
+/// Inspects the current Leptos context for `Parts` and `ResponseOptions` to insert the
+/// `Location` header or set a 302 status code.
+///
+/// # Example
+///
+/// ```ignore
+/// use leptos_wasi::utils::redirect;
+/// use leptos::prelude::*;
+///
+/// #[component]
+/// fn RedirectButton() -> impl IntoView {
+///     let on_click = |_| {
+///         redirect("/target-page");
+///     };
+///     view! { <button on:click=on_click>"Go"</button> }
+/// }
+/// ```
 pub fn redirect(path: &str) {
     if let (Some(req), Some(res)) =
         (use_context::<Parts>(), use_context::<ResponseOptions>())
     {
         // insert the Location header in any case
-        res.insert_header(
-            header::LOCATION,
-            header::HeaderValue::from_str(path)
-                .expect("Failed to create HeaderValue"),
-        );
+        match header::HeaderValue::from_str(path) {
+            Ok(value) => {
+                res.insert_header(header::LOCATION, value);
+            }
+            Err(e) => {
+                eprintln!("Invalid redirect path: {}, error: {:?}", path, e);
+                res.set_status(StatusCode::BAD_REQUEST);
+                return;
+            }
+        }
 
         let accepts_html = req
             .headers
