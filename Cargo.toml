@@ -9,31 +9,31 @@ edition = "2024"
 rust-version = "1.93.0"
 
 [dependencies]
-throw_error = { version = "0.3.0" }
+throw_error = { version = "0.3.1" }
 hydration_context = { version = "0.3.0" }
-futures = "0.3.30"
+futures = "0.3.32"
 wasi = { version = "0.14.7", optional = true }
 wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
-leptos = { version = "0.8.9", default-features = false, features = ["nonce", "ssr"] }
-leptos_meta = { version = "0.8.5", default-features = false, features = ["ssr"] }
-leptos_router = { version = "0.8.7", default-features = false, features = ["ssr"] }
-leptos_macro = { version = "0.8.8", default-features = false, features = ["generic"] }
-leptos_integration_utils = { version = "0.8.5", default-features = false }
-server_fn = { version = "0.8.7",  features = ["generic","axum-no-default"] , default-features = false}
+leptos = { version = "0.8.19", default-features = false, features = ["nonce", "ssr"] }
+leptos_meta = { version = "0.8.6", default-features = false, features = ["ssr"] }
+leptos_router = { version = "0.8.13", default-features = false, features = ["ssr"] }
+leptos_macro = { version = "0.8.16", default-features = false, features = ["generic"] }
+leptos_integration_utils = { version = "0.8.8", default-features = false }
+server_fn = { version = "0.8.12",  features = ["generic","axum-no-default"] , default-features = false}
 any_spawner = { version = "0.3.0", features = ["futures-executor"] }
-http = "1.1.0"
-http-body = "1.0.0"
+http = "1.4.1"
+http-body = "1.0.1"
 http-body-util = "0.1.3"
-parking_lot = "0.12.3"
-bytes = "1.7.2"
+parking_lot = "0.12.5"
+bytes = "1.11.1"
 routefinder = "0.5.4"
 mime_guess = "2.0"
 thiserror = "2"
 async-stream = "0.3.6"
-axum-core = "0.5.2"
+axum-core = "0.5.6"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-tokio = { version = "1.38", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "stream"] }
 anyhow = "1.0"
 serde_json = "1.0"
