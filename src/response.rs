@@ -10,18 +10,28 @@ use thiserror::Error;
 #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 use wasi::http::types::{HeaderError, Headers};
 
-/// This crate uses platform-agnostic [`http::Response`]
-/// with a custom [`Body`] and convert them under the hood to
-/// WASI native types.
+/// Represents a platform-agnostic HTTP response wrapped with a WASI-compatible [`Body`].
 ///
-/// It supports both [`Body::Sync`] and [`Body::Async`],
-/// allowing you to choose between synchronous response
-/// (i.e. sending the whole response) and asynchronous response
-/// (i.e. streaming the response).
+/// It supports both [`Body::Sync`] (sending the whole response at once) and
+/// [`Body::Async`] (streaming the response).
+///
+/// # Example
+///
+/// ```rust
+/// use bytes::Bytes;
+/// use leptos_wasi::response::{Body, Response};
+///
+/// let http_res = http::Response::builder()
+///     .status(200)
+///     .body(Body::Sync(Bytes::from("Hello WASI!")))
+///     .unwrap();
+/// let response = Response(http_res);
+/// ```
 pub struct Response(pub http::Response<Body>);
 
 #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
 impl Response {
+    /// Converts the response headers to the WASI Preview 2 native `Headers` type.
     pub fn headers(&self) -> Result<Headers, ResponseError> {
         let headers = Headers::new();
         for (name, value) in self.0.headers() {
@@ -40,6 +50,17 @@ where
     }
 }
 
+/// The response body representation, which supports both synchronous buffer transfers and asynchronous streams.
+///
+/// # Example
+///
+/// ```rust
+/// use bytes::Bytes;
+/// use leptos_wasi::response::Body;
+///
+/// // Synchronous body
+/// let sync_body = Body::Sync(Bytes::from("Sync response data"));
+/// ```
 pub enum Body {
     /// The response body will be written synchronously.
     Sync(Bytes),
@@ -151,6 +172,7 @@ impl From<axum_core::body::Body> for Body {
 /// This struct lets you define headers and override the status of the Response from an Element or a Server Function
 /// Typically contained inside of a ResponseOptions. Setting this is useful for cookies and custom responses.
 #[derive(Debug, Clone, Default)]
+/// Extracted HTTP parts (headers and status code) for configuring response options.
 pub struct ResponseParts {
     pub headers: HeaderMap,
     pub status: Option<StatusCode>,
@@ -218,6 +240,7 @@ impl ExtendResponse for Response {
 }
 
 #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
+/// Errors that can occur when converting HTTP headers to WASI Preview 2 headers.
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum ResponseError {

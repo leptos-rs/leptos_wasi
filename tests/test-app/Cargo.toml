@@ -1,0 +1,35 @@
+[package]
+name = "test-app"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+any_spawner = { version = "0.3.0", features = ["futures-executor"] }
+bytes = "1.7.2"
+futures = "0.3.30"
+hydration_context = { version = "0.3.0" }
+leptos = { version = "0.8.9", default-features = false, features = ["ssr"] }
+leptos_meta = { version = "0.8.5", default-features = false, features = ["ssr"] }
+leptos_router = { version = "0.8.7", default-features = false, features = ["ssr"] }
+leptos_wasi = { path = "../..", default-features = false }
+server_fn = { version = "0.8.7", default-features = false, features = ["axum-no-default"] }
+wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
+wasi = { version = "0.14.7", optional = true }
+axum-core = "0.5.2"
+serde = { version = "1", features = ["derive"] }
+http = "1"
+
+[features]
+default = ["wasip2"]
+wasip2 = ["leptos_wasi/wasip2", "dep:wasi"]
+wasip3 = ["leptos_wasi/wasip3", "dep:wasip3"]
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"

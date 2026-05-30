@@ -62,5 +62,10 @@ pub mod prelude {
 
 /// When working with streams, this crate will try to chunk bytes with
 /// this size.
+///
+/// Note: This was previously 64 bytes, which caused excessive
+/// `blocking_write_and_flush` calls per response. 8KB is a standard
+/// I/O buffer size that provides a good balance between memory usage
+/// and write efficiency.
 #[cfg(all(feature = "wasip2", not(feature = "wasip3")))]
-const CHUNK_BYTE_SIZE: usize = 64;
+const CHUNK_BYTE_SIZE: usize = 8192;

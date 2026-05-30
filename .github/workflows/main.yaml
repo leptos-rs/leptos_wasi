@@ -15,14 +15,41 @@ jobs:
   make:
     runs-on: ubuntu-latest
     steps:
-      - uses:  actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
       - name: Install cargo-make
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: --debug cargo-make
-      - name: Run CI
+
+      - name: Run CI (fmt, clippy, build)
         uses: actions-rs/cargo@v1
         with:
           command: make
           args: ci-flow
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-wasip2
+
+      - name: Install cargo-binstall
+        run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Install wasmtime-cli
+        run: cargo binstall wasmtime-cli@45.0.0 --no-confirm
+
+      - name: Install spin
+        run: curl -fsSL https://spinframework.dev/downloads/install.sh | bash -s -- -v v4.0.0 && sudo mv spin /usr/local/bin/
+
+      - name: Build guest test apps and run E2E tests
+        run: ./run_tests.sh

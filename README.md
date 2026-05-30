@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 |------------|---------|-------|
 | Leptos | `0.8.9` | Fully tested |
 | Spin SDK | `6.0.0` | WASIp3 native HTTP triggers |
-| `wasi` | `0.13.1` | WASIp2 types and polling interfaces |
+| `wasi` | `0.14.7` | WASIp2 types and polling interfaces |
 | `wasip3` | `0.6.0` | WASIp3 core types, host spawner, HTTP compatibility |
 | `http-body` | `1.0.0` | Standard streaming response frames |
 
@@ -52,10 +52,10 @@ https://github.com/user-attachments/assets/6596e0f3-80c0-4258-a4e3-f85c41b328b4
 ```toml
 [dependencies]
 # WASI Preview 2 (default) — cooperative polling executor:
-leptos_wasi = "0.3.0"
+leptos_wasi = "0.3.1"
 
 # WASI Preview 3 — native host-level task spawning:
-leptos_wasi = { version = "0.3.0", default-features = false, features = ["wasip3"] }
+leptos_wasi = { version = "0.3.1", default-features = false, features = ["wasip3"] }
 ```
 
 > [!NOTE]
@@ -90,8 +90,8 @@ impl wasip3::exports::http::handler::Guest for LeptosServer {
                 eprintln!("Error building handler: {:?}", e);
                 ErrorCode::InternalError(None)
             })?
-            .with_server_fn_axum::<GetCount>()
-            .with_server_fn_axum::<IncrementCount>()
+            .with_server_fn::<GetCount>()
+            .with_server_fn::<IncrementCount>()
             .generate_routes(App)
             .handle_with_context(move || shell(leptos_options.clone()), || {})
             .await
@@ -149,7 +149,7 @@ impl Guest for LeptosServer {
 
         executor.run_until(async {
             Handler::build(request, response_out).unwrap()
-                .with_server_fn_axum::<GetCount>()
+                .with_server_fn::<GetCount>()
                 .generate_routes(App)
                 .handle_with_context(move || shell(leptos_options.clone()), || {})
                 .await
@@ -169,14 +169,8 @@ wasmtime serve target/server/wasm32-wasip2/release/your_crate.wasm -Scommon
 ## Server Function Registration
 
 ```rust
-// Recommended — axum backend (most common):
-.with_server_fn_axum::<MyServerFn>()
-
-// Generic backend:
-.with_server_fn_generic::<MyServerFn>()
-
-// Explicit body type control:
-.with_server_fn::<MyServerFn, BodyType>()
+// Register a server function (body types inferred automatically):
+.with_server_fn::<MyServerFn>()
 ```
 
 ## Static File Serving
@@ -210,7 +204,7 @@ handler.static_files_handler("/pkg", serve_static_files)
 **Server function not found (404):**
 Ensure every `#[server]` function is registered on the handler:
 ```rust
-.with_server_fn_axum::<YourServerFn>()
+.with_server_fn::<YourServerFn>()
 ```
 
 [leptos-ssr-modes]: https://book.leptos.dev/ssr/23_ssr_modes.html
