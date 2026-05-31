@@ -11,14 +11,14 @@ crate-type = [ "cdylib" ]
 any_spawner = { version = "0.3.0", features = ["futures-executor"] }
 anyhow = "1"
 console_error_panic_hook = "0.1"
-leptos = { version = "0.8.9" }
-leptos_meta = { version = "0.8.5" }
-leptos_router = { version = "0.8.7" }
+leptos = { version = "0.8.19" }
+leptos_meta = { version = "0.8.6" }
+leptos_router = { version = "0.8.13" }
 leptos_wasi = { path = "../..", default-features = false, features = ["wasip3"], optional = true }
 spin-sdk = { version = "6.0.0", optional = true }
 wasi = { version = "0.14.7", optional = true }
 wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
-wasm-bindgen = { version = "=0.2.103", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", features = ["Storage", "Window"], optional = true }
 
 [workspace]
@@ -44,3 +44,18 @@ bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]
 lib-default-features = false
+
+[patch.crates-io]
+server_fn = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+throw_error = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_dom = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_meta = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_router = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+tachys = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+hydration_context = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_integration_utils = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+any_spawner = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_macro = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+
+

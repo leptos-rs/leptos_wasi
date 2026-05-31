@@ -43,3 +43,17 @@ default = ["wasip2"]
 wasip2 = ["dep:wasi"]
 wasip3 = ["dep:wasip3"]
 islands-router = []
+
+[patch.crates-io]
+server_fn = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+throw_error = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_dom = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_meta = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_router = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+tachys = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+hydration_context = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_integration_utils = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+any_spawner = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_macro = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+
