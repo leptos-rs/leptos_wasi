@@ -12,14 +12,15 @@ any_spawner = { version = "0.3.0", features = ["futures-executor"] }
 bytes = "1.7.2"
 futures = "0.3.30"
 hydration_context = { version = "0.3.0" }
-leptos = { version = "0.8.9", default-features = false, features = ["ssr"] }
-leptos_meta = { version = "0.8.5", default-features = false, features = ["ssr"] }
-leptos_router = { version = "0.8.7", default-features = false, features = ["ssr"] }
+leptos = { version = "0.8.19", default-features = false, features = ["ssr"] }
+leptos_meta = { version = "0.8.6", default-features = false, features = ["ssr"] }
+leptos_router = { version = "0.8.13", default-features = false, features = ["ssr"] }
 leptos_wasi = { path = "../..", default-features = false }
-server_fn = { version = "0.8.7", default-features = false, features = ["axum-no-default"] }
+server_fn = { version = "0.8.12", default-features = false, features = ["axum-no-default"] }
 wasip3 = { version = "0.6.0", features = ["http-compat"], optional = true }
 wasi = { version = "0.14.7", optional = true }
-axum-core = "0.5.2"
+leptos_macro = { version = "0.8.16", default-features = false, features = ["generic"] }
+axum-core = "0.5.6"
 serde = { version = "1", features = ["derive"] }
 http = "1"
 
@@ -33,3 +34,16 @@ opt-level = 'z'
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[patch.crates-io]
+server_fn = { path = "../../../leptos_src/server_fn" }
+throw_error = { path = "../../../leptos_src/any_error" }
+leptos = { path = "../../../leptos_src/leptos" }
+leptos_dom = { path = "../../../leptos_src/leptos_dom" }
+leptos_meta = { path = "../../../leptos_src/meta" }
+leptos_router = { path = "../../../leptos_src/router" }
+tachys = { path = "../../../leptos_src/tachys" }
+hydration_context = { path = "../../../leptos_src/hydration_context" }
+leptos_integration_utils = { path = "../../../leptos_src/integrations/utils" }
+any_spawner = { path = "../../../leptos_src/any_spawner" }
+leptos_macro = { path = "../../../leptos_src/leptos_macro" }
