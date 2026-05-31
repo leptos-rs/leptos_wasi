@@ -5,6 +5,7 @@ version = 4
 [[package]]
 name = "any_spawner"
 version = "0.3.0"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "futures",
  "thiserror 2.0.18",
@@ -267,6 +268,7 @@ dependencies = [
 [[package]]
 name = "const_str_slice_concat"
 version = "0.1.0"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 
 [[package]]
 name = "convert_case"
@@ -367,6 +369,7 @@ checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
 [[package]]
 name = "either_of"
 version = "0.1.9"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "paste",
  "pin-project-lite",
@@ -664,6 +667,7 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 [[package]]
 name = "hydration_context"
 version = "0.3.0"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "futures",
  "js-sys",
@@ -872,6 +876,7 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 [[package]]
 name = "leptos"
 version = "0.8.19"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "any_spawner",
  "base64",
@@ -912,6 +917,7 @@ dependencies = [
 [[package]]
 name = "leptos_config"
 version = "0.8.10"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "config",
  "serde",
@@ -922,6 +928,7 @@ dependencies = [
 [[package]]
 name = "leptos_dom"
 version = "0.8.8"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "js-sys",
  "or_poisoned",
@@ -935,6 +942,7 @@ dependencies = [
 [[package]]
 name = "leptos_hot_reload"
 version = "0.8.6"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "anyhow",
  "camino",
@@ -951,6 +959,7 @@ dependencies = [
 [[package]]
 name = "leptos_integration_utils"
 version = "0.8.8"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "futures",
  "hydration_context",
@@ -964,6 +973,7 @@ dependencies = [
 [[package]]
 name = "leptos_macro"
 version = "0.8.16"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "attribute-derive",
  "cfg-if",
@@ -986,6 +996,7 @@ dependencies = [
 [[package]]
 name = "leptos_meta"
 version = "0.8.6"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "futures",
  "indexmap",
@@ -999,6 +1010,7 @@ dependencies = [
 [[package]]
 name = "leptos_router"
 version = "0.8.13"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "any_spawner",
  "either_of",
@@ -1022,6 +1034,7 @@ dependencies = [
 [[package]]
 name = "leptos_router_macro"
 version = "0.8.6"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "proc-macro-error2",
  "proc-macro2",
@@ -1032,6 +1045,7 @@ dependencies = [
 [[package]]
 name = "leptos_server"
 version = "0.8.7"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "any_spawner",
  "base64",
@@ -1173,10 +1187,12 @@ dependencies = [
 [[package]]
 name = "next_tuple"
 version = "0.1.0"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 
 [[package]]
 name = "oco_ref"
 version = "0.2.1"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -1191,6 +1207,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 [[package]]
 name = "or_poisoned"
 version = "0.1.0"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 
 [[package]]
 name = "parking"
@@ -1423,6 +1440,7 @@ dependencies = [
 [[package]]
 name = "reactive_graph"
 version = "0.2.14"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "any_spawner",
  "async-lock",
@@ -1445,6 +1463,7 @@ dependencies = [
 [[package]]
 name = "reactive_stores"
 version = "0.4.3"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "guardian",
  "indexmap",
@@ -1460,6 +1479,7 @@ dependencies = [
 [[package]]
 name = "reactive_stores_macro"
 version = "0.4.2"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "convert_case 0.11.0",
  "proc-macro-error2",
@@ -1619,6 +1639,7 @@ dependencies = [
 [[package]]
 name = "server_fn"
 version = "0.8.12"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "axum",
  "base64",
@@ -1656,6 +1677,7 @@ dependencies = [
 [[package]]
 name = "server_fn_macro"
 version = "0.8.10"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "const_format",
  "convert_case 0.11.0",
@@ -1669,6 +1691,7 @@ dependencies = [
 [[package]]
 name = "server_fn_macro_default"
 version = "0.8.5"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "server_fn_macro",
  "syn",
@@ -1787,6 +1810,7 @@ dependencies = [
 [[package]]
 name = "tachys"
 version = "0.2.15"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "any_spawner",
  "async-trait",
@@ -1878,6 +1902,7 @@ dependencies = [
 [[package]]
 name = "throw_error"
 version = "0.3.1"
+source = "git+https://github.com/codeitlikemiley/leptos.git?rev=9b52b03d2b8a8016a264820f3035a3d61475a62f#9b52b03d2b8a8016a264820f3035a3d61475a62f"
 dependencies = [
  "pin-project-lite",
 ]

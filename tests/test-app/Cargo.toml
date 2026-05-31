@@ -36,14 +36,15 @@ codegen-units = 1
 panic = "abort"
 
 [patch.crates-io]
-server_fn = { path = "../../../leptos_src/server_fn" }
-throw_error = { path = "../../../leptos_src/any_error" }
-leptos = { path = "../../../leptos_src/leptos" }
-leptos_dom = { path = "../../../leptos_src/leptos_dom" }
-leptos_meta = { path = "../../../leptos_src/meta" }
-leptos_router = { path = "../../../leptos_src/router" }
-tachys = { path = "../../../leptos_src/tachys" }
-hydration_context = { path = "../../../leptos_src/hydration_context" }
-leptos_integration_utils = { path = "../../../leptos_src/integrations/utils" }
-any_spawner = { path = "../../../leptos_src/any_spawner" }
-leptos_macro = { path = "../../../leptos_src/leptos_macro" }
+server_fn = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+throw_error = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_dom = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_meta = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_router = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+tachys = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+hydration_context = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_integration_utils = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+any_spawner = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+leptos_macro = { git = "https://github.com/codeitlikemiley/leptos.git", rev = "9b52b03d2b8a8016a264820f3035a3d61475a62f" }
+
